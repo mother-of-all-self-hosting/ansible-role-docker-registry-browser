@@ -1,0 +1,21 @@
+---
+
+- name: Fail if required Container Registry settings not defined
+  ansible.builtin.fail:
+    msg: >-
+      You need to define a required configuration setting (`{{ item }}`) for using this role.
+  when: "vars[item] == ''"
+  with_items:
+    - docker_registry_browser_hostname
+    - docker_registry_browser_path_prefix
+    - docker_registry_browser_uid
+    - docker_registry_browser_gid
+    - docker_registry_browser_docker_registry_url
+
+- name: Fail if required Container Registry + Traefik integration settings not defined
+  ansible.builtin.fail:
+    msg: >-
+      You need to define a required configuration setting (`{{ item }}`) when `docker_registry_browser_container_labels_traefik_enabled`
+  when: "docker_registry_browser_container_labels_traefik_enabled | bool and vars[item] == ''"
+  with_items:
+    - docker_registry_browser_container_labels_traefik_docker_network

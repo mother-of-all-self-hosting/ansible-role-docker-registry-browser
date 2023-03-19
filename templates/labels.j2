@@ -1,0 +1,33 @@
+{% if docker_registry_browser_container_labels_traefik_enabled %}
+traefik.enable=true
+
+{% if docker_registry_browser_container_labels_traefik_docker_network %}
+traefik.docker.network={{ docker_registry_browser_container_labels_traefik_docker_network }}
+{% endif %}
+
+traefik.http.services.{{ docker_registry_browser_identifier }}.loadbalancer.server.port=8080
+
+{% set middlewares = [] %}
+
+{% if docker_registry_browser_basic_auth_enabled %}
+traefik.http.middlewares.{{ docker_registry_browser_identifier }}-auth.basicauth.users={{ docker_registry_browser_container_label_basicauth_users }}
+{% set middlewares = middlewares + [docker_registry_browser_identifier + '-auth@docker'] %}
+{% endif %}
+
+traefik.http.middlewares.{{ docker_registry_browser_identifier }}-strip-prefix.stripprefix.prefixes={{ docker_registry_browser_path_prefix }}
+{% set middlewares = middlewares + [docker_registry_browser_identifier + '-strip-prefix@docker'] %}
+
+traefik.http.routers.{{ docker_registry_browser_identifier }}.rule={{ docker_registry_browser_container_labels_traefik_rule }}
+{% if middlewares | length > 0 %}
+traefik.http.routers.{{ docker_registry_browser_identifier }}.middlewares={{ middlewares | join(',') }}
+{% endif %}
+traefik.http.routers.{{ docker_registry_browser_identifier }}.service={{ docker_registry_browser_identifier }}
+traefik.http.routers.{{ docker_registry_browser_identifier }}.priority={{ docker_registry_browser_container_labels_traefik_priority }}
+traefik.http.routers.{{ docker_registry_browser_identifier }}.tls={{ docker_registry_browser_container_labels_traefik_tls | to_json }}
+{% if docker_registry_browser_container_labels_traefik_tls %}
+traefik.http.routers.{{ docker_registry_browser_identifier }}.tls.certResolver={{ docker_registry_browser_container_labels_traefik_tls_certResolver }}
+{% endif %}
+traefik.http.routers.{{ docker_registry_browser_identifier }}.entrypoints={{ docker_registry_browser_container_labels_traefik_entrypoints }}
+{% endif %}
+
+{{ docker_registry_browser_container_labels_additional_labels }}

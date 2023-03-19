@@ -1,0 +1,96 @@
+---
+
+docker_registry_browser_enabled: true
+
+docker_registry_browser_identifier: docker-registry-browser
+
+# The fully-qualified name where the registry browser will run (e.g. `registry.example.com`)
+docker_registry_browser_hostname: ''
+
+# The URL path where registry browser will be served
+docker_registry_browser_path_prefix: /browser
+
+docker_registry_browser_version: 1.6.0
+
+docker_registry_browser_container_image: "{{ docker_registry_browser_container_image_registry_prefix }}klausmeyer/docker-registry-browser:{{ docker_registry_browser_container_image_tag }}"
+docker_registry_browser_container_image_tag: "{{ docker_registry_browser_version }}"
+docker_registry_browser_container_image_force_pull: "{{ docker_registry_browser_container_image.endswith(':latest') }}"
+docker_registry_browser_container_image_registry_prefix: docker.io/
+
+docker_registry_browser_container_network: "{{ docker_registry_browser_identifier }}"
+
+# A list of additional container networks that the container would be connected to.
+# The playbook does not create these networks, so make sure they already exist.
+docker_registry_browser_container_additional_networks: []
+
+docker_registry_browser_uid: ''
+docker_registry_browser_gid: ''
+
+docker_registry_browser_base_path: "/{{ docker_registry_browser_identifier }}"
+
+# A full URL to the container registry.
+# Controls the `DOCKER_REGISTRY_URL` environment variable
+docker_registry_browser_docker_registry_url: ''
+
+# Controls the `SCRIPT_NAME` environment variable
+docker_registry_browser_script_name: '{{ docker_registry_browser_path_prefix }}'
+
+# Controls the `RAILS_RELATIVE_URL_ROOT` environment variable
+docker_registry_browser_rails_relative_url_root: '{{ docker_registry_browser_path_prefix }}'
+
+# Controls the `ENABLE_DELETE_IMAGES` environment variable
+docker_registry_browser_enabled_delete_images: false
+
+docker_registry_browser_systemd_required_systemd_services_list: ['docker.service']
+
+# docker_registry_browser_basic_auth_enabled controls whether HTTP Basic Auth is enabled.
+# Also see `docker_registry_browser_container_label_basicauth_users`.
+docker_registry_browser_basic_auth_enabled: false
+docker_registry_browser_basic_auth_username: ''
+docker_registry_browser_basic_auth_password: ''
+# docker_registry_browser_container_label_basicauth_users is populated at runtime based on
+# docker_registry_browser_basic_auth_username and docker_registry_browser_basic_auth_password
+docker_registry_browser_container_label_basicauth_users: ''
+docker_registry_browser_basic_auth_apache_container_image: "{{ docker_registry_browser_basic_auth_apache_container_image_registry_prefix }}httpd:{{ docker_registry_browser_basic_auth_apache_container_image_tag }}"
+docker_registry_browser_basic_auth_apache_container_image_tag: "2.4.56-alpine3.17"
+docker_registry_browser_basic_auth_apache_container_image_force_pull: "{{ docker_registry_browser_basic_auth_apache_container_image.endswith(':latest') }}"
+docker_registry_browser_basic_auth_apache_container_image_registry_prefix: docker.io/
+
+# docker_registry_browser_container_labels_traefik_enabled controls whether labels to assist a Traefik reverse-proxy will be attached to the container.
+# See `../templates/labels.j2` for details.
+#
+# To inject your own other container labels, see `docker_registry_browser_container_labels_additional_labels`.
+docker_registry_browser_container_labels_traefik_enabled: true
+docker_registry_browser_container_labels_traefik_docker_network: ''
+docker_registry_browser_container_labels_traefik_rule: "Host(`{{ docker_registry_browser_hostname }}`) && PathPrefix(`{{ docker_registry_browser_path_prefix }}`)"
+# We're raising the priority from the default (0) to 200,
+# because the registry browser likely runs at the same host as the registry itself, but under a path (e.g. /browser),
+# and we'd like for the registry browser to take priority over that path (e.g. /browser).
+# Why 200? Because priorities are based on rule length. 200 should be longer than whatever rule we use for the registry.
+docker_registry_browser_container_labels_traefik_priority: 200
+docker_registry_browser_container_labels_traefik_entrypoints: web-secure
+docker_registry_browser_container_labels_traefik_tls: "{{ docker_registry_browser_container_labels_traefik_entrypoints != 'web' }}"
+docker_registry_browser_container_labels_traefik_tls_certResolver: default  # noqa var-naming
+
+# docker_registry_browser_container_http_bind_port controls whether (and how) the container
+# exposes its HTTP port (`docker_registry_browser_config_rocket_port`).
+# Leave empty to not expose it.
+# Example values: `127.0.0.1:8080`, `0.0.0.0:8080`, `8080`.
+docker_registry_browser_container_http_bind_port: ''
+
+# docker_registry_browser_container_labels_additional_labels contains a multiline string with additional labels to add to the container label file.
+# See `../templates/labels.j2` for details.
+#
+# Example:
+# docker_registry_browser_container_labels_additional_labels: |
+#   my.label=1
+#   another.label="here"
+docker_registry_browser_container_labels_additional_labels: ''
+
+# docker_registry_browser_container_additional_environment_variables contains a multiline string with additional environment variables to pass to the container.
+#
+# Example:
+# docker_registry_browser_container_additional_environment_variables: |
+#   VAR=1
+#   ANOTHER=value
+docker_registry_browser_container_additional_environment_variables: ''

@@ -1,0 +1,46 @@
+[Unit]
+Description=Container Registry Browser ({{ docker_registry_browser_identifier }})
+{% for service in docker_registry_browser_systemd_required_systemd_services_list %}
+Requires={{ service }}
+After={{ service }}
+{% endfor %}
+DefaultDependencies=no
+
+[Service]
+Type=simple
+Environment="HOME={{ devture_systemd_docker_base_systemd_unit_home_path }}"
+ExecStartPre=-{{ devture_systemd_docker_base_host_command_sh }} -c '{{ devture_systemd_docker_base_host_command_docker }} kill {{ docker_registry_browser_identifier }} 2>/dev/null'
+ExecStartPre=-{{ devture_systemd_docker_base_host_command_sh }} -c '{{ devture_systemd_docker_base_host_command_docker }} rm {{ docker_registry_browser_identifier }} 2>/dev/null'
+
+# `--read-only` cannot be used:
+# > /usr/local/bundle/gems/puma-6.0.0/lib/puma/launcher.rb:304:in `write': Read-only file system @ rb_sysopen - tmp/pids/server.pid (Errno::EROFS)
+# `--user` cannot be used:
+# > /usr/local/bundle/gems/puma-6.0.0/lib/puma/launcher.rb:304:in `write': Permission denied @ rb_sysopen - tmp/pids/server.pid (Errno::EACCES)
+ExecStartPre={{ devture_systemd_docker_base_host_command_docker }} create \
+			--rm \
+			--name={{ docker_registry_browser_identifier }} \
+			--log-driver=none \
+			--network={{ docker_registry_browser_container_network }} \
+			--cap-drop=ALL \
+			{% if docker_registry_browser_container_http_bind_port %}
+			-p {{ docker_registry_browser_container_http_bind_port }}:8080 \
+			{% endif %}
+			--env-file={{ docker_registry_browser_base_path }}/env \
+			--label-file={{ docker_registry_browser_base_path }}/labels \
+			--tmpfs=/tmp:rw,noexec,nosuid,size=512m \
+			{{ docker_registry_browser_container_image }}
+
+{% for network in docker_registry_browser_container_additional_networks %}
+ExecStartPre={{ devture_systemd_docker_base_host_command_docker }} network connect {{ network }} {{ docker_registry_browser_identifier }}
+{% endfor %}
+
+ExecStart={{ devture_systemd_docker_base_host_command_docker }} start --attach {{ docker_registry_browser_identifier }}
+
+ExecStop=-{{ devture_systemd_docker_base_host_command_sh }} -c '{{ devture_systemd_docker_base_host_command_docker }} kill {{ docker_registry_browser_identifier }} 2>/dev/null'
+ExecStop=-{{ devture_systemd_docker_base_host_command_sh }} -c '{{ devture_systemd_docker_base_host_command_docker }} rm {{ docker_registry_browser_identifier }} 2>/dev/null'
+Restart=always
+RestartSec=30
+SyslogIdentifier={{ docker_registry_browser_identifier }}
+
+[Install]
+WantedBy=multi-user.target
