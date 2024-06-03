@@ -10,7 +10,7 @@ docker_registry_browser_hostname: ''
 # The URL path where registry browser will be served
 docker_registry_browser_path_prefix: /browser
 
-docker_registry_browser_version: 1.6.1
+docker_registry_browser_version: 1.7.2
 
 docker_registry_browser_container_image: "{{ docker_registry_browser_container_image_registry_prefix }}klausmeyer/docker-registry-browser:{{ docker_registry_browser_container_image_tag }}"
 docker_registry_browser_container_image_tag: "{{ docker_registry_browser_version }}"
@@ -40,6 +40,9 @@ docker_registry_browser_rails_relative_url_root: '{{ docker_registry_browser_pat
 
 # Controls the `ENABLE_DELETE_IMAGES` environment variable
 docker_registry_browser_enabled_delete_images: false
+
+# Controls the `SECRET_KEY_BASE` environment variable
+docker_registry_browser_secret_key_base: ''
 
 docker_registry_browser_systemd_required_systemd_services_list: ['docker.service']
 

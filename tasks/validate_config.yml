@@ -11,6 +11,7 @@
     - docker_registry_browser_uid
     - docker_registry_browser_gid
     - docker_registry_browser_docker_registry_url
+    - docker_registry_browser_secret_key_base
 
 - name: Fail if required Container Registry + Traefik integration settings not defined
   ansible.builtin.fail:
