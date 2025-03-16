@@ -10,7 +10,7 @@ docker_registry_browser_hostname: ''
 # The URL path where registry browser will be served
 docker_registry_browser_path_prefix: /browser
 
-docker_registry_browser_version: 1.7.2
+docker_registry_browser_version: 1.7.5
 
 docker_registry_browser_container_image: "{{ docker_registry_browser_container_image_registry_prefix }}klausmeyer/docker-registry-browser:{{ docker_registry_browser_container_image_tag }}"
 docker_registry_browser_container_image_tag: "{{ docker_registry_browser_version }}"
