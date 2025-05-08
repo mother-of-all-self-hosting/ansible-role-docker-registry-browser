@@ -11,7 +11,7 @@ traefik.enable=true
 traefik.docker.network={{ docker_registry_browser_container_labels_traefik_docker_network }}
 {% endif %}
 
-traefik.http.services.{{ docker_registry_browser_identifier }}.loadbalancer.server.port=8080
+traefik.http.services.{{ docker_registry_browser_identifier }}.loadbalancer.server.port={{ docker_registry_browser_container_http_port }}
 
 {% set middlewares = [] %}
 
