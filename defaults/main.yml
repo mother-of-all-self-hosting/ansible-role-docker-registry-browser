@@ -49,6 +49,7 @@ docker_registry_browser_basic_auth_apache_container_image_force_pull: "{{ docker
 # Example values: `127.0.0.1:8080`, `0.0.0.0:8080`, `8080`.
 docker_registry_browser_container_http_bind_port: ''
 
+# The base container network. It will be auto-created by this role if it doesn't exist already.
 docker_registry_browser_container_network: "{{ docker_registry_browser_identifier }}"
 
 # The port number in the container
