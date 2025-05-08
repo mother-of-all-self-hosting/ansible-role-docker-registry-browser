@@ -1,3 +1,7 @@
+# SPDX-FileCopyrightText: 2023 Slavi Pantaleev
+#
+# SPDX-License-Identifier: AGPL-3.0-or-later
+
 ---
 # We use the `htpasswd` tool to generate the htpasswd file.
 # There's an Ansible module that helps with that, but it requires passlib (a Python module) to be installed on the server.
