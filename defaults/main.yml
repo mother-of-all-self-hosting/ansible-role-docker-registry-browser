@@ -21,12 +21,21 @@ docker_registry_browser_path_prefix: /browser
 
 docker_registry_browser_version: 1.7.5
 
+docker_registry_browser_basic_auth_apache_version: 2.4.56-alpine3.17
+
 docker_registry_browser_container_image: "{{ docker_registry_browser_container_image_registry_prefix }}klausmeyer/docker-registry-browser:{{ docker_registry_browser_container_image_tag }}"
 docker_registry_browser_container_image_tag: "{{ docker_registry_browser_version }}"
 docker_registry_browser_container_image_registry_prefix: "{{ docker_registry_browser_container_image_registry_prefix_upstream }}"
 docker_registry_browser_container_image_registry_prefix_upstream: "{{ docker_registry_browser_container_image_registry_prefix_upstream_default }}"
 docker_registry_browser_container_image_registry_prefix_upstream_default: docker.io/
 docker_registry_browser_container_image_force_pull: "{{ docker_registry_browser_container_image.endswith(':latest') }}"
+
+docker_registry_browser_basic_auth_apache_container_image: "{{ docker_registry_browser_basic_auth_apache_container_image_registry_prefix }}httpd:{{ docker_registry_browser_basic_auth_apache_container_image_tag }}"
+docker_registry_browser_basic_auth_apache_container_image_tag: "{{ docker_registry_browser_basic_auth_apache_version }}"
+docker_registry_browser_basic_auth_apache_container_image_registry_prefix: "{{ docker_registry_browser_basic_auth_apache_container_image_registry_prefix_upstream }}"
+docker_registry_browser_basic_auth_apache_container_image_registry_prefix_upstream: "{{ docker_registry_browser_basic_auth_apache_container_image_registry_prefix_upstream_default }}"
+docker_registry_browser_basic_auth_apache_container_image_registry_prefix_upstream_default: docker.io/
+docker_registry_browser_basic_auth_apache_container_image_force_pull: "{{ docker_registry_browser_basic_auth_apache_container_image.endswith(':latest') }}"
 
 docker_registry_browser_container_network: "{{ docker_registry_browser_identifier }}"
 
@@ -65,10 +74,6 @@ docker_registry_browser_basic_auth_password: ''
 # docker_registry_browser_container_label_basicauth_users is populated at runtime based on
 # docker_registry_browser_basic_auth_username and docker_registry_browser_basic_auth_password
 docker_registry_browser_container_label_basicauth_users: ''
-docker_registry_browser_basic_auth_apache_container_image: "{{ docker_registry_browser_basic_auth_apache_container_image_registry_prefix }}httpd:{{ docker_registry_browser_basic_auth_apache_container_image_tag }}"
-docker_registry_browser_basic_auth_apache_container_image_tag: "2.4.56-alpine3.17"
-docker_registry_browser_basic_auth_apache_container_image_force_pull: "{{ docker_registry_browser_basic_auth_apache_container_image.endswith(':latest') }}"
-docker_registry_browser_basic_auth_apache_container_image_registry_prefix: docker.io/
 
 # docker_registry_browser_container_labels_traefik_enabled controls whether labels to assist a Traefik reverse-proxy will be attached to the container.
 # See `../templates/labels.j2` for details.
