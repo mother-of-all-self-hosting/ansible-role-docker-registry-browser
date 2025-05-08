@@ -82,7 +82,7 @@ docker_registry_browser_container_labels_traefik_tls_certResolver: default  # no
 #   another.label="here"
 docker_registry_browser_container_labels_additional_labels: ''
 
-docker_registry_browser_systemd_required_systemd_services_list: ['docker.service']
+docker_registry_browser_systemd_required_services_list: ['docker.service']
 
 # docker_registry_browser_basic_auth_enabled controls whether HTTP Basic Auth is enabled.
 # Also see `docker_registry_browser_container_label_basicauth_users`.
