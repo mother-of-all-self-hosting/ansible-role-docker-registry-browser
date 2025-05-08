@@ -46,6 +46,6 @@
 
 - name: Ensure Registry Browser systemd service installed
   ansible.builtin.template:
-    src: "{{ role_path }}/templates/registry-browser.service.j2"
+    src: "{{ role_path }}/templates/systemd/registry-browser.service.j2"
     dest: "{{ devture_systemd_docker_base_systemd_path }}/{{ docker_registry_browser_identifier }}.service"
     mode: 0640
