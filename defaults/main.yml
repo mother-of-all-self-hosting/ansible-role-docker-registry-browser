@@ -20,7 +20,7 @@ docker_registry_browser_hostname: ''
 docker_registry_browser_path_prefix: /browser
 
 # renovate: datasource=docker depName=klausmeyer/docker-registry-browser versioning=semver
-docker_registry_browser_version: 1.7.5
+docker_registry_browser_version: 1.8.2
 
 # renovate: datasource=docker depName=httpd
 docker_registry_browser_basic_auth_apache_version: 2.4.56-alpine3.17
