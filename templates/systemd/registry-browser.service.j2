@@ -28,18 +28,18 @@ ExecStartPre=-{{ devture_systemd_docker_base_host_command_sh }} -c '{{ devture_s
 # `--user` cannot be used:
 # > /usr/local/bundle/gems/puma-6.0.0/lib/puma/launcher.rb:304:in `write': Permission denied @ rb_sysopen - tmp/pids/server.pid (Errno::EACCES)
 ExecStartPre={{ devture_systemd_docker_base_host_command_docker }} create \
-			--rm \
-			--name={{ docker_registry_browser_identifier }} \
-			--log-driver=none \
-			--network={{ docker_registry_browser_container_network }} \
-			--cap-drop=ALL \
-			{% if docker_registry_browser_container_http_bind_port %}
-			-p {{ docker_registry_browser_container_http_bind_port }}:8080 \
-			{% endif %}
-			--env-file={{ docker_registry_browser_base_path }}/env \
-			--label-file={{ docker_registry_browser_base_path }}/labels \
-			--tmpfs=/tmp:rw,noexec,nosuid,size=512m \
-			{{ docker_registry_browser_container_image }}
+      --rm \
+      --name={{ docker_registry_browser_identifier }} \
+      --log-driver=none \
+      --cap-drop=ALL \
+      --network={{ docker_registry_browser_container_network }} \
+      {% if docker_registry_browser_container_http_bind_port %}
+      -p {{ docker_registry_browser_container_http_bind_port }}:8080 \
+      {% endif %}
+      --env-file={{ docker_registry_browser_base_path }}/env \
+      --label-file={{ docker_registry_browser_base_path }}/labels \
+      --tmpfs=/tmp:rw,noexec,nosuid,size=512m \
+      {{ docker_registry_browser_container_image }}
 
 {% for network in docker_registry_browser_container_additional_networks %}
 ExecStartPre={{ devture_systemd_docker_base_host_command_docker }} network connect {{ network }} {{ docker_registry_browser_identifier }}
@@ -49,6 +49,7 @@ ExecStart={{ devture_systemd_docker_base_host_command_docker }} start --attach {
 
 ExecStop=-{{ devture_systemd_docker_base_host_command_sh }} -c '{{ devture_systemd_docker_base_host_command_docker }} stop -t {{ devture_systemd_docker_base_container_stop_grace_time_seconds }} {{ docker_registry_browser_identifier }} 2>/dev/null'
 ExecStop=-{{ devture_systemd_docker_base_host_command_sh }} -c '{{ devture_systemd_docker_base_host_command_docker }} rm {{ docker_registry_browser_identifier }} 2>/dev/null'
+
 Restart=always
 RestartSec=30
 SyslogIdentifier={{ docker_registry_browser_identifier }}
