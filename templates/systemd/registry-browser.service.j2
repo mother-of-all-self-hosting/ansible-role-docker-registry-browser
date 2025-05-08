@@ -34,7 +34,7 @@ ExecStartPre={{ devture_systemd_docker_base_host_command_docker }} create \
       --cap-drop=ALL \
       --network={{ docker_registry_browser_container_network }} \
       {% if docker_registry_browser_container_http_bind_port %}
-      -p {{ docker_registry_browser_container_http_bind_port }}:8080 \
+      -p {{ docker_registry_browser_container_http_bind_port }}:{{ docker_registry_browser_container_http_port }} \
       {% endif %}
       --env-file={{ docker_registry_browser_base_path }}/env \
       --label-file={{ docker_registry_browser_base_path }}/labels \
