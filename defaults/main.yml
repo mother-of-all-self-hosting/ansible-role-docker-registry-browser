@@ -88,6 +88,9 @@ docker_registry_browser_systemd_required_services_list_default: "{{ [devture_sys
 docker_registry_browser_systemd_required_services_list_auto: []
 docker_registry_browser_systemd_required_services_list_custom: []
 
+# List of systemd services that the registry browser systemd service wants
+docker_registry_browser_systemd_wanted_services_list: []
+
 # docker_registry_browser_basic_auth_enabled controls whether HTTP Basic Auth is enabled.
 # Also see `docker_registry_browser_container_label_basicauth_users`.
 docker_registry_browser_basic_auth_enabled: false
