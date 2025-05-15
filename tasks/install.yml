@@ -5,7 +5,7 @@
 
 ---
 
-- name: Ensure Docker Registry Browser paths exist
+- name: Ensure Docker Registry Browser path exists
   ansible.builtin.file:
     path: "{{ item }}"
     state: directory
@@ -15,7 +15,7 @@
   with_items:
     - "{{ docker_registry_browser_base_path }}"
 
-- name: Ensure Docker Registry Browser support files created
+- name: Ensure Docker Registry Browser support files installed
   ansible.builtin.template:
     src: "{{ role_path }}/templates/{{ item }}.j2"
     dest: "{{ docker_registry_browser_base_path }}/{{ item }}"
