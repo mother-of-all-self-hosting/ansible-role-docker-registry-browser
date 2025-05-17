@@ -11,19 +11,19 @@
 
 - when: docker_registry_browser_service_stat.stat.exists | bool
   block:
-    - name: Ensure Docker Registry Browser systemd services are stopped
+    - name: Ensure Docker Registry Browser systemd service is stopped
       ansible.builtin.service:
         name: "{{ docker_registry_browser_identifier }}"
         state: stopped
         enabled: false
         daemon_reload: true
 
-    - name: Ensure Docker Registry Browser systemd service does not exists
+    - name: Ensure Docker Registry Browser systemd service does not exist
       ansible.builtin.file:
         path: "{{ devture_systemd_docker_base_systemd_path }}/{{ docker_registry_browser_identifier }}.service"
         state: absent
 
-    - name: Ensure Docker Registry Browser path doesn't exist
+    - name: Ensure Docker Registry Browser path does not exist
       ansible.builtin.file:
         path: "{{ docker_registry_browser_base_path }}"
         state: absent
