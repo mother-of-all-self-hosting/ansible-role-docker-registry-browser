@@ -12,6 +12,7 @@
   when: "item.old in vars"
   with_items:
     - {'old': 'docker_registry_browser_systemd_required_systemd_services_list', 'new': 'docker_registry_browser_systemd_required_services_list'}
+    - {'old': 'docker_registry_browser_container_additional_environment_variables', 'new': 'docker_registry_browser_environment_variables_additional_variables'}
 
 - name: Fail if required Container Registry settings not defined
   ansible.builtin.fail:
