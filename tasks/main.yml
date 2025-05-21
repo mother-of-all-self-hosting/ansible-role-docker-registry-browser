@@ -4,12 +4,7 @@
 
 ---
 
-- tags:
-    - setup-all
-    - setup-docker-registry-browser
-    - install-all
-    - install-docker-registry-browser
-  block:
+- block:
     - when: docker_registry_browser_enabled | bool
       ansible.builtin.include_tasks: "{{ role_path }}/tasks/validate_config.yml"
 
@@ -18,10 +13,15 @@
 
     - when: docker_registry_browser_enabled | bool
       ansible.builtin.include_tasks: "{{ role_path }}/tasks/install.yml"
-
-- tags:
+  tags:
     - setup-all
     - setup-docker-registry-browser
-  block:
+    - install-all
+    - install-docker-registry-browser
+
+- block:
     - when: not docker_registry_browser_enabled | bool
       ansible.builtin.include_tasks: "{{ role_path }}/tasks/uninstall.yml"
+  tags:
+    - setup-all
+    - setup-docker-registry-browser
