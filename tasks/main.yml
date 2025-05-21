@@ -4,14 +4,18 @@
 
 ---
 
-- block:
-    - when: docker_registry_browser_enabled | bool
+- name: Perform Docker Registry Browser installation tasks
+  block:
+    - name: Validate Docker Registry Browser configuration
+      when: docker_registry_browser_enabled | bool
       ansible.builtin.include_tasks: "{{ role_path }}/tasks/validate_config.yml"
 
-    - when: docker_registry_browser_enabled | bool
+    - name: Prepare HTTP Basic Auth for Docker Registry Browser
+      when: docker_registry_browser_enabled | bool
       ansible.builtin.include_tasks: "{{ role_path }}/tasks/prepare_basic_auth.yml"
 
-    - when: docker_registry_browser_enabled | bool
+    - name: Install Docker Registry Browser
+      when: docker_registry_browser_enabled | bool
       ansible.builtin.include_tasks: "{{ role_path }}/tasks/install.yml"
   tags:
     - setup-all
@@ -19,8 +23,10 @@
     - install-all
     - install-docker-registry-browser
 
-- block:
-    - when: not docker_registry_browser_enabled | bool
+- name: Perform Docker Registry Browser uninstallation tasks
+  block:
+    - name: Uninstall Docker Registry Browser
+      when: not docker_registry_browser_enabled | bool
       ansible.builtin.include_tasks: "{{ role_path }}/tasks/uninstall.yml"
   tags:
     - setup-all
