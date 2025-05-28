@@ -8,7 +8,8 @@
 # See: https://docs.ansible.com/ansible/2.3/htpasswd_module.html#requirements-on-host-that-executes-module
 # We support various distros, with various versions of Python. Installing additional Python modules can be a hassle.
 # As a workaround, we run `htpasswd` from an Apache container image.
-- when: docker_registry_browser_basic_auth_enabled | bool
+- name: Run if HTTP Basic Auth is enabled
+  when: docker_registry_browser_basic_auth_enabled | bool
   block:
     - name: Ensure Apache Docker image is pulled for generating htpasswd file
       community.docker.docker_image:
@@ -27,7 +28,7 @@
       ansible.builtin.copy:
         content: "{{ docker_registry_browser_basic_auth_password }}"
         dest: "/tmp/registry-browser-password"
-        mode: 0400
+        mode: "0400"
         owner: "{{ docker_registry_browser_uid }}"
         group: "{{ docker_registry_browser_gid }}"
 

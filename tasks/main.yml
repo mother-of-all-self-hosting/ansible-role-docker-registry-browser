@@ -3,31 +3,28 @@
 # SPDX-License-Identifier: AGPL-3.0-or-later
 
 ---
-
 - name: Perform Docker Registry Browser installation tasks
-  block:
-    - name: Validate Docker Registry Browser configuration
-      when: docker_registry_browser_enabled | bool
-      ansible.builtin.include_tasks: "{{ role_path }}/tasks/validate_config.yml"
-
-    - name: Prepare HTTP Basic Auth for Docker Registry Browser
-      when: docker_registry_browser_enabled | bool
-      ansible.builtin.include_tasks: "{{ role_path }}/tasks/prepare_basic_auth.yml"
-
-    - name: Install Docker Registry Browser
-      when: docker_registry_browser_enabled | bool
-      ansible.builtin.include_tasks: "{{ role_path }}/tasks/install.yml"
   tags:
     - setup-all
     - setup-docker-registry-browser
     - install-all
     - install-docker-registry-browser
+  block:
+    - name: Validate Docker Registry Browser configuration
+      when: docker_registry_browser_enabled | bool
+      ansible.builtin.include_tasks: "{{ role_path }}/tasks/validate_config.yml"
+    - name: Prepare HTTP Basic Auth for Docker Registry Browser
+      when: docker_registry_browser_enabled | bool
+      ansible.builtin.include_tasks: "{{ role_path }}/tasks/prepare_basic_auth.yml"
+    - name: Install Docker Registry Browser
+      when: docker_registry_browser_enabled | bool
+      ansible.builtin.include_tasks: "{{ role_path }}/tasks/install.yml"
 
 - name: Perform Docker Registry Browser uninstallation tasks
+  tags:
+    - setup-all
+    - setup-docker-registry-browser
   block:
     - name: Uninstall Docker Registry Browser
       when: not docker_registry_browser_enabled | bool
       ansible.builtin.include_tasks: "{{ role_path }}/tasks/uninstall.yml"
-  tags:
-    - setup-all
-    - setup-docker-registry-browser
