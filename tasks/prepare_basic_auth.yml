@@ -8,7 +8,7 @@
 # See: https://docs.ansible.com/ansible/2.3/htpasswd_module.html#requirements-on-host-that-executes-module
 # We support various distros, with various versions of Python. Installing additional Python modules can be a hassle.
 # As a workaround, we run `htpasswd` from an Apache container image.
-- name: Run if HTTP Basic Auth is enabled
+- name: Run if HTTP Basic authentication is enabled
   when: docker_registry_browser_basic_auth_enabled | bool
   block:
     - name: Ensure Apache Docker image is pulled for generating htpasswd file
@@ -24,7 +24,7 @@
 
     # We store the password in a file and make the `htpasswd` tool read it from there,
     # as opposed to passing it directly on stdin (which will expose it to other processes on the server).
-    - name: Store HTTP Basic Auth password in a temporary file
+    - name: Store HTTP Basic authentication password in a temporary file
       ansible.builtin.copy:
         content: "{{ docker_registry_browser_basic_auth_password }}"
         dest: "/tmp/registry-browser-password"
@@ -53,7 +53,7 @@
       ansible.builtin.set_fact:
         docker_registry_browser_container_label_basicauth_users: "{{ htpasswd_result.stdout }}"
 
-    - name: Delete temporary HTTP Basic Auth password file
+    - name: Delete temporary HTTP Basic authentication password file
       ansible.builtin.file:
         path: /tmp/registry-browser-password
         state: absent

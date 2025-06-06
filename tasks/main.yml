@@ -13,7 +13,7 @@
   block:
     - name: Validate Docker Registry Browser configuration
       ansible.builtin.include_tasks: "{{ role_path }}/tasks/validate_config.yml"
-    - name: Prepare HTTP Basic Auth for Docker Registry Browser
+    - name: Prepare HTTP Basic authentication for Docker Registry Browser
       ansible.builtin.include_tasks: "{{ role_path }}/tasks/prepare_basic_auth.yml"
     - name: Install Docker Registry Browser
       ansible.builtin.include_tasks: "{{ role_path }}/tasks/install.yml"
