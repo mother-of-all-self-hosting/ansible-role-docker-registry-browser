@@ -37,10 +37,10 @@ docker_registry_browser_container_image_registry_prefix_upstream_default: docker
 docker_registry_browser_container_image_force_pull: "{{ docker_registry_browser_container_image.endswith(':latest') }}"
 
 docker_registry_browser_container_image_self_build: false
-docker_registry_browser_container_image_name: "klausmeyer/docker-registry-browser:{{ docker_registry_browser_container_repo_version }}"
-docker_registry_browser_container_repo: "https://github.com/klausmeyer/docker-registry-browser.git"
-docker_registry_browser_container_repo_version: "{{ 'v' + docker_registry_browser_version if docker_registry_browser_version != 'latest' else 'main' }}"
-docker_registry_browser_container_src_files_path: "{{ docker_registry_browser_base_path }}/docker-src"
+docker_registry_browser_container_image_self_build_name: "klausmeyer/docker-registry-browser:{{ docker_registry_browser_container_image_self_build_repo_version }}"
+docker_registry_browser_container_image_self_build_repo: "https://github.com/klausmeyer/docker-registry-browser.git"
+docker_registry_browser_container_image_self_build_repo_version: "{{ 'v' + docker_registry_browser_version if docker_registry_browser_version != 'latest' else 'main' }}"
+docker_registry_browser_container_image_self_build_src_files_path: "{{ docker_registry_browser_base_path }}/docker-src"
 
 docker_registry_browser_basic_auth_apache_container_image: "{{ docker_registry_browser_basic_auth_apache_container_image_registry_prefix }}httpd:{{ docker_registry_browser_basic_auth_apache_container_image_tag }}"
 docker_registry_browser_basic_auth_apache_container_image_tag: "{{ docker_registry_browser_basic_auth_apache_version }}"
