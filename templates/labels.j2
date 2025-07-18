@@ -11,8 +11,6 @@ traefik.enable=true
 traefik.docker.network={{ docker_registry_browser_container_labels_traefik_docker_network }}
 {% endif %}
 
-traefik.http.services.{{ docker_registry_browser_identifier }}.loadbalancer.server.port={{ docker_registry_browser_container_http_port }}
-
 {% set middlewares = [] %}
 
 {% if docker_registry_browser_basic_auth_enabled %}
@@ -34,6 +32,8 @@ traefik.http.routers.{{ docker_registry_browser_identifier }}.tls={{ docker_regi
 traefik.http.routers.{{ docker_registry_browser_identifier }}.tls.certResolver={{ docker_registry_browser_container_labels_traefik_tls_certResolver }}
 {% endif %}
 traefik.http.routers.{{ docker_registry_browser_identifier }}.entrypoints={{ docker_registry_browser_container_labels_traefik_entrypoints }}
+
+traefik.http.services.{{ docker_registry_browser_identifier }}.loadbalancer.server.port={{ docker_registry_browser_container_http_port }}
 {% endif %}
 
 {{ docker_registry_browser_container_labels_additional_labels }}
