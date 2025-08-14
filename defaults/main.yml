@@ -15,7 +15,7 @@ docker_registry_browser_identifier: docker-registry-browser
 docker_registry_browser_base_path: "/{{ docker_registry_browser_identifier }}"
 
 # renovate: datasource=docker depName=klausmeyer/docker-registry-browser versioning=semver
-docker_registry_browser_version: 1.8.3
+docker_registry_browser_version: 1.8.4
 
 # renovate: datasource=docker depName=httpd
 docker_registry_browser_basic_auth_apache_version: 2.4.57-alpine3.17
