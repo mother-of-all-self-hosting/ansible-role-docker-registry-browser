@@ -24,6 +24,7 @@
     - docker_registry_browser_gid
     - docker_registry_browser_hostname
     - docker_registry_browser_path_prefix
+    - docker_registry_browser_container_network
     - docker_registry_browser_docker_registry_url
     - docker_registry_browser_secret_key_base
 
