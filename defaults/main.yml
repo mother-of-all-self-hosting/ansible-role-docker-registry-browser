@@ -104,6 +104,9 @@ docker_registry_browser_systemd_wanted_services_list_default: []
 docker_registry_browser_systemd_wanted_services_list_auto: []
 docker_registry_browser_systemd_wanted_services_list_custom: []
 
+# Specify the timezone
+docker_registry_browser_environment_variables_tz: UTC
+
 # docker_registry_browser_basic_auth_enabled controls whether HTTP Basic authentication is enabled.
 # Also see `docker_registry_browser_container_label_basicauth_users`.
 docker_registry_browser_basic_auth_enabled: false
