@@ -20,11 +20,11 @@ docker_registry_browser_version: 1.9.0
 # renovate: datasource=docker depName=httpd
 docker_registry_browser_basic_auth_apache_version: 2.4.57-alpine3.17
 
-docker_registry_browser_uid: ''
-docker_registry_browser_gid: ''
+docker_registry_browser_uid: ""
+docker_registry_browser_gid: ""
 
 # The fully-qualified name where the Docker Registry Browser will run (e.g. `registry.example.com`)
-docker_registry_browser_hostname: ''
+docker_registry_browser_hostname: ""
 
 # The URL path where Docker Registry Browser will be served
 docker_registry_browser_path_prefix: /browser
@@ -53,7 +53,7 @@ docker_registry_browser_basic_auth_apache_container_image_force_pull: "{{ docker
 # exposes its HTTP port (`docker_registry_browser_config_rocket_port`).
 # Leave empty to not expose it.
 # Example values: `127.0.0.1:8080`, `0.0.0.0:8080`, `8080`.
-docker_registry_browser_container_http_bind_port: ''
+docker_registry_browser_container_http_bind_port: ""
 
 # The base container network. It will be auto-created by this role if it doesn't exist already.
 docker_registry_browser_container_network: "{{ docker_registry_browser_identifier }}"
@@ -72,7 +72,7 @@ docker_registry_browser_container_additional_networks_custom: []
 #
 # To inject your own other container labels, see `docker_registry_browser_container_labels_additional_labels`.
 docker_registry_browser_container_labels_traefik_enabled: true
-docker_registry_browser_container_labels_traefik_docker_network: ''
+docker_registry_browser_container_labels_traefik_docker_network: ""
 docker_registry_browser_container_labels_traefik_rule: "Host(`{{ docker_registry_browser_hostname }}`) && PathPrefix(`{{ docker_registry_browser_path_prefix }}`)"
 # We're raising the priority from the default (0) to 200,
 # because the Docker Registry Browser likely runs at the same host as the registry itself, but under a path (e.g. /browser),
@@ -118,15 +118,15 @@ docker_registry_browser_environment_variables_tz: UTC
 # docker_registry_browser_basic_auth_enabled controls whether HTTP Basic authentication is enabled.
 # Also see `docker_registry_browser_container_label_basicauth_users`.
 docker_registry_browser_basic_auth_enabled: false
-docker_registry_browser_basic_auth_username: ''
-docker_registry_browser_basic_auth_password: ''
+docker_registry_browser_basic_auth_username: ""
+docker_registry_browser_basic_auth_password: ""
 # docker_registry_browser_container_label_basicauth_users is populated at runtime based on
 # docker_registry_browser_basic_auth_username and docker_registry_browser_basic_auth_password
-docker_registry_browser_container_label_basicauth_users: ''
+docker_registry_browser_container_label_basicauth_users: ""
 
 # A full URL to the container registry.
 # Controls the `DOCKER_REGISTRY_URL` environment variable
-docker_registry_browser_docker_registry_url: ''
+docker_registry_browser_docker_registry_url: ""
 
 # Controls the `SCRIPT_NAME` environment variable
 docker_registry_browser_script_name: '{{ docker_registry_browser_path_prefix }}'
@@ -138,7 +138,7 @@ docker_registry_browser_rails_relative_url_root: '{{ docker_registry_browser_pat
 docker_registry_browser_enabled_delete_images: false
 
 # Controls the `SECRET_KEY_BASE` environment variable
-docker_registry_browser_secret_key_base: ''
+docker_registry_browser_secret_key_base: ""
 
 # docker_registry_browser_environment_variables_additional_variables contains a multiline string with additional environment variables to pass to the container.
 #
@@ -146,4 +146,4 @@ docker_registry_browser_secret_key_base: ''
 # docker_registry_browser_environment_variables_additional_variables: |
 #   VAR=1
 #   ANOTHER=value
-docker_registry_browser_environment_variables_additional_variables: ''
+docker_registry_browser_environment_variables_additional_variables: ""
