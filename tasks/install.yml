@@ -19,9 +19,9 @@
   ansible.builtin.template:
     src: "{{ role_path }}/templates/{{ item }}.j2"
     dest: "{{ docker_registry_browser_base_path }}/{{ item }}"
+    mode: "0640"
     owner: "{{ docker_registry_browser_uid }}"
     group: "{{ docker_registry_browser_gid }}"
-    mode: "0640"
   with_items:
     - env
     - labels
