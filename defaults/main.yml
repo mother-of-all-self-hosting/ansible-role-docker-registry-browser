@@ -1,8 +1,9 @@
-# SPDX-FileCopyrightText: 2023 - 2024 Nikita Chernyi
-# SPDX-FileCopyrightText: 2023 - 2025 Slavi Pantaleev
+# SPDX-FileCopyrightText: 2023, 2024 Nikita Chernyi
+# SPDX-FileCopyrightText: 2023-2025 Slavi Pantaleev
+# SPDX-FileCopyrightText: 2024 Julian-Samuel Gebühr
 # SPDX-FileCopyrightText: 2024 Sergio Durigan Junior
 # SPDX-FileCopyrightText: 2025 MASH project contributors
-# SPDX-FileCopyrightText: 2025 Suguru Hirahara
+# SPDX-FileCopyrightText: 2025, 2026 Suguru Hirahara
 #
 # SPDX-License-Identifier: AGPL-3.0-or-later
 
@@ -26,7 +27,8 @@ docker_registry_browser_gid: ""
 # The hostname at which Docker Registry Browser is served.
 docker_registry_browser_hostname: ""
 
-# The URL path where Docker Registry Browser will be served
+# The path at which Docker Registry Browser is served.
+# This value must either be `/` or not end with a slash (e.g. `/browser`).
 docker_registry_browser_path_prefix: /browser
 
 docker_registry_browser_container_image: "{{ docker_registry_browser_container_image_registry_prefix }}klausmeyer/docker-registry-browser:{{ docker_registry_browser_container_image_tag }}"
@@ -49,10 +51,9 @@ docker_registry_browser_basic_auth_apache_container_image_registry_prefix_upstre
 docker_registry_browser_basic_auth_apache_container_image_registry_prefix_upstream_default: docker.io/
 docker_registry_browser_basic_auth_apache_container_image_force_pull: "{{ docker_registry_browser_basic_auth_apache_container_image.endswith(':latest') }}"
 
-# docker_registry_browser_container_http_bind_port controls whether (and how) the container
-# exposes its HTTP port (`docker_registry_browser_config_rocket_port`).
-# Leave empty to not expose it.
-# Example values: `127.0.0.1:8080`, `0.0.0.0:8080`, `8080`.
+# Controls whether the container exposes its HTTP port (tcp/8080 in the container).
+#
+# Takes an "<ip>:<port>" or "<port>" value (e.g. "127.0.0.1:2586"), or empty string to not expose.
 docker_registry_browser_container_http_bind_port: ""
 
 # The base container network. It will be auto-created by this role if it doesn't exist already.
@@ -62,7 +63,8 @@ docker_registry_browser_container_network: "{{ docker_registry_browser_identifie
 docker_registry_browser_container_http_port: 8080
 
 # A list of additional container networks that the container would be connected to.
-# The playbook does not create these networks, so make sure they already exist.
+# The role does not create these networks, so make sure they already exist.
+# Use this to expose this container to another reverse proxy, which runs in a different container network.
 docker_registry_browser_container_additional_networks: "{{ docker_registry_browser_container_additional_networks_auto + docker_registry_browser_container_additional_networks_custom }}"
 docker_registry_browser_container_additional_networks_auto: []
 docker_registry_browser_container_additional_networks_custom: []
