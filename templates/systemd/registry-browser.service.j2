@@ -38,7 +38,7 @@ ExecStartPre={{ devture_systemd_docker_base_host_command_docker }} create \
       {% endif %}
       --env-file={{ docker_registry_browser_base_path }}/env \
       --label-file={{ docker_registry_browser_base_path }}/labels \
-      --tmpfs=/tmp:rw,noexec,nosuid,size=512m \
+      --tmpfs=/tmp:rw,noexec,nosuid,size={{ docker_registry_browser_container_tmpfs_tmp_size }} \
       {% for arg in docker_registry_browser_container_extra_arguments %}
       {{ arg }} \
       {% endfor %}
