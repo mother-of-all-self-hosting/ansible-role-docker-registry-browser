@@ -134,10 +134,10 @@ docker_registry_browser_container_label_basicauth_users: ""
 docker_registry_browser_docker_registry_url: ""
 
 # Controls the `SCRIPT_NAME` environment variable
-docker_registry_browser_script_name: '{{ docker_registry_browser_path_prefix }}'
+docker_registry_browser_script_name: "{{ docker_registry_browser_path_prefix }}"
 
 # Controls the `RAILS_RELATIVE_URL_ROOT` environment variable
-docker_registry_browser_rails_relative_url_root: '{{ docker_registry_browser_path_prefix }}'
+docker_registry_browser_rails_relative_url_root: "{{ docker_registry_browser_path_prefix }}"
 
 # Controls the `ENABLE_DELETE_IMAGES` environment variable
 docker_registry_browser_enabled_delete_images: false
