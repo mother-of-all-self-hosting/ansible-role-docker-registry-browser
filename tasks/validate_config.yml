@@ -14,6 +14,8 @@
     - { "old": "docker_registry_browser_systemd_required_systemd_services_list", "new": "docker_registry_browser_systemd_required_services_list" }
     - "old": "docker_registry_browser_container_additional_environment_variables"
       "new": "docker_registry_browser_environment_variables_additional_variables"
+    - { "old": "docker_registry_browser_container_image_force_pull", "new": "<removed> (the new community.docker.docker_image_pull module handles this natively)" }
+    - { "old": "docker_registry_browser_basic_auth_apache_container_image_force_pull", "new": "<removed> (the new community.docker.docker_image_pull module handles this natively)" }
 
 - name: Fail if required Container Registry settings not defined
   ansible.builtin.fail:

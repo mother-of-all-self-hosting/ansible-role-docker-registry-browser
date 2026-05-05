@@ -36,7 +36,6 @@ docker_registry_browser_container_image_tag: "{{ docker_registry_browser_version
 docker_registry_browser_container_image_registry_prefix: "{{ docker_registry_browser_container_image_registry_prefix_upstream }}"
 docker_registry_browser_container_image_registry_prefix_upstream: "{{ docker_registry_browser_container_image_registry_prefix_upstream_default }}"
 docker_registry_browser_container_image_registry_prefix_upstream_default: docker.io/
-docker_registry_browser_container_image_force_pull: "{{ docker_registry_browser_container_image.endswith(':latest') }}"
 
 docker_registry_browser_container_image_self_build: false
 docker_registry_browser_container_image_self_build_name: "klausmeyer/docker-registry-browser:{{ docker_registry_browser_container_image_self_build_repo_version }}"
@@ -49,7 +48,6 @@ docker_registry_browser_basic_auth_apache_container_image_tag: "{{ docker_regist
 docker_registry_browser_basic_auth_apache_container_image_registry_prefix: "{{ docker_registry_browser_basic_auth_apache_container_image_registry_prefix_upstream }}"
 docker_registry_browser_basic_auth_apache_container_image_registry_prefix_upstream: "{{ docker_registry_browser_basic_auth_apache_container_image_registry_prefix_upstream_default }}"
 docker_registry_browser_basic_auth_apache_container_image_registry_prefix_upstream_default: docker.io/
-docker_registry_browser_basic_auth_apache_container_image_force_pull: "{{ docker_registry_browser_basic_auth_apache_container_image.endswith(':latest') }}"
 
 # The base container network. It will be auto-created by this role if it doesn't exist already.
 docker_registry_browser_container_network: "{{ docker_registry_browser_identifier }}"
