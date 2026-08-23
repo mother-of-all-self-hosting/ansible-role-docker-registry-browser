@@ -1,15 +1,26 @@
 # SPDX-FileCopyrightText: 2026 Suguru Hirahara
 # SPDX-FileCopyrightText: 2026 spatterlight
+# SPDX-FileCopyrightText: 2026 Slavi Pantaleev
 #
 # SPDX-License-Identifier: AGPL-3.0-or-later
 
 ---
-- name: Verify Docker Registry Browser systemd service
+# The `default` scenario is where the browser's behavior is exercised in
+# depth. What is peculiar to this scenario is only where the container image
+# came from, so that is what is checked here: the image was built from the
+# application's source tree on this host, and the service is running that image
+# rather than the one Docker Hub would have handed over.
+- name: Verify Docker Registry Browser running a self-built container image
   hosts: all
   become: true
   gather_facts: false
   tasks:
-    - name: Wait for Docker Registry Browser service to become active (up to 180s)
+    - name: Load the Docker Registry Browser role defaults
+      ansible.builtin.include_vars:
+        file: "{{ lookup('env', 'MOLECULE_PROJECT_DIRECTORY') }}/defaults/main.yml"
+        name: docker_registry_browser_defaults
+
+    - name: Wait for the Docker Registry Browser service to become active (up to 180s)
       ansible.builtin.systemd:
         name: docker-registry-browser.service
       register: docker_registry_browser_service
@@ -17,37 +28,103 @@
       retries: 36
       delay: 5
 
-    - name: Assert Docker Registry Browser service is active
+    - name: Assert the Docker Registry Browser service is active
       ansible.builtin.assert:
         that: docker_registry_browser_service.status.ActiveState == 'active'
-        fail_msg: "docker-registry-browser.service not active ({{ docker_registry_browser_service.status.ActiveState }})"
+        fail_msg: "docker-registry-browser.service is not active ({{ docker_registry_browser_service.status.ActiveState }})"
         success_msg: "docker-registry-browser.service is active"
 
-    - name: Retrieve Docker Registry Browser service log for debugging
+    - name: Retrieve the Docker Registry Browser service log for debugging
       when: docker_registry_browser_debug_service_enabled | bool
       ansible.builtin.command:
-        cmd: journalctl -xeu docker-registry-browser.service
+        argv:
+          - journalctl
+          - --no-pager
+          - --output=cat
+          - --unit=docker-registry-browser.service
       changed_when: false
 
-    - name: Wait for Docker Registry Browser HTTP endpoint to respond (up to 10m)
+    # A self-built image that boots but cannot reach the registry would answer
+    # 500 here, the way the `default` scenario's negative control does. The
+    # registry this scenario installs holds nothing, so what comes back is an
+    # empty listing - but an empty listing is still a listing, and getting one
+    # means the self-built image talked to the registry and rendered the answer.
+    - name: Wait for the Docker Registry Browser to serve its repository listing (up to 300s)
       ansible.builtin.uri:
-        url: "http://localhost:8080/browser"
-        method: GET
-        status_code: [200, 301, 302]
+        url: "{{ docker_registry_browser_molecule_url }}/"
         follow_redirects: none
-      register: docker_registry_browser_endpoint
-      until: docker_registry_browser_endpoint.status in [200, 301, 302]
-      retries: 120
+      register: docker_registry_browser_index
+      until: docker_registry_browser_index is not failed
+      retries: 60
       delay: 5
 
-    - name: Assert Docker Registry Browser HTTP endpoint responds
+    - name: Assert the self-built Docker Registry Browser serves its repository listing
       ansible.builtin.assert:
-        that: docker_registry_browser_endpoint.status in [200, 301, 302]
-        fail_msg: "Docker Registry Browser did not respond as expected ({{ docker_registry_browser_endpoint.status | default('no response') }})"
-        success_msg: "Docker Registry Browser responded with {{ docker_registry_browser_endpoint.status }}"
+        that: docker_registry_browser_index.status == 200
+        fail_msg: "The self-built browser did not serve a repository listing ({{ docker_registry_browser_index.status }})"
+        success_msg: "The self-built browser serves its repository listing, so it reached the registry"
 
-    - name: Show Docker Registry Browser systemd service status summary
+    - name: Inspect the Docker Registry Browser container
+      ansible.builtin.command:
+        argv:
+          - docker
+          - inspect
+          - docker-registry-browser
+      register: docker_registry_browser_container_inspect
+      changed_when: false
+
+    - name: Make sense of the Docker Registry Browser container inspection
+      ansible.builtin.set_fact:
+        docker_registry_browser_container: "{{ (docker_registry_browser_container_inspect.stdout | from_json)[0] }}"
+
+    # The self-built image is tagged after the git tag of the source that was
+    # checked out, which carries a `v` the Docker Hub tag does not. That one
+    # character is what tells a self-build run apart from one that quietly ran
+    # the image from Docker Hub instead.
+    - name: Assert the Docker Registry Browser container runs the self-built image
+      ansible.builtin.assert:
+        that: >-
+          docker_registry_browser_container.Config.Image
+          == 'klausmeyer/docker-registry-browser:v'
+          ~ docker_registry_browser_defaults.docker_registry_browser_version
+        fail_msg: >-
+          The container is not running the self-built image:
+          {{ docker_registry_browser_container.Config.Image }}
+        success_msg: "The container runs the self-built {{ docker_registry_browser_container.Config.Image }}"
+
+    - name: Inspect the self-built Docker Registry Browser container image
+      ansible.builtin.command:
+        argv:
+          - docker
+          - inspect
+          - "klausmeyer/docker-registry-browser:v{{ docker_registry_browser_defaults.docker_registry_browser_version }}"
+      register: docker_registry_browser_image_inspect
+      changed_when: false
+
+    - name: Make sense of the self-built Docker Registry Browser container image inspection
+      ansible.builtin.set_fact:
+        docker_registry_browser_image: "{{ (docker_registry_browser_image_inspect.stdout | from_json)[0] }}"
+
+    # An image pulled from a registry carries the repository digest it was
+    # pulled by. One that was built here has never been in a registry, so it
+    # has none - which is the difference this scenario exists to demonstrate.
+    - name: Assert the Docker Registry Browser container image was built here rather than pulled
+      ansible.builtin.assert:
+        that: docker_registry_browser_image.RepoDigests | length == 0
+        fail_msg: "The image was pulled rather than built here: {{ docker_registry_browser_image.RepoDigests }}"
+        success_msg: "The image carries no repository digest, so it was built on this host"
+
+    # The `default` scenario asserts that the version the application reports
+    # in its page footer is docker_registry_browser_version. That assertion
+    # cannot be made here: the footer is rendered from SOURCE_VERSION, which
+    # the upstream Dockerfile takes as a build argument with no default
+    # (`ARG SOURCE_VERSION`), and the role passes no build arguments. A
+    # self-built image therefore reports an empty version however new it is,
+    # and the image name asserted above is the honest evidence available.
+    - name: Show the Docker Registry Browser self-build verification summary
       ansible.builtin.debug:
         msg:
-          - "Docker Registry Browser systemd: {{ docker_registry_browser_service.status.ActiveState }}"
-          - "Docker Registry Browser HTTP: {{ docker_registry_browser_endpoint.status }}"
+          - "Service: {{ docker_registry_browser_service.status.ActiveState }}"
+          - "Repository listing: {{ docker_registry_browser_index.status }}"
+          - "Image: {{ docker_registry_browser_container.Config.Image }}"
+          - "Repository digests: {{ docker_registry_browser_image.RepoDigests }}"

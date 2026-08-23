@@ -47,11 +47,17 @@ Currently these testing scenarios are available:
 
 ### `default`
 
-Tests a standard Docker Registry Browser installation.
+Tests a standard Docker Registry Browser installation, against a Docker Registry installed alongside it on the same container network and seeded with a repository and tags of the scenario's own invention.
+
+The scenario starts by running the stock container image on its own, with no role involvement, as a negative control: the image boots and serves HTTP unaided, but it reaches no registry and puts no path prefix in its links, so those are the things the assertions may credit the role with. It then installs the role twice — once with its own defaults and once with tag deletion enabled — and checks that the seeded repository and each of its tags are browsable, that the configured path prefix reaches the running process, that the delete controls appear only once deletion is enabled, and that the version the application reports in its own page footer is the one `defaults/main.yml` asks for.
+
+The browser is addressed at `/` rather than at the configured path prefix, because the role's Traefik labels put a `stripprefix` middleware in front of the container, so `/` is what the application sees in a real deployment.
 
 ### `default-selfbuild`
 
 Tests a standard Docker Registry Browser installation with self-building the container image.
+
+The browser's behavior is covered by the `default` scenario; what is peculiar to this one is where the container image came from, so that is what it checks: the service runs an image tagged after the git tag that was checked out, and that image carries no repository digest, which it could not have avoided having been pulled.
 
 ## Running
 

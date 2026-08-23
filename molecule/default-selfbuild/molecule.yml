@@ -1,5 +1,6 @@
 # SPDX-FileCopyrightText: 2026 Suguru Hirahara
 # SPDX-FileCopyrightText: 2026 spatterlight
+# SPDX-FileCopyrightText: 2026 Slavi Pantaleev
 #
 # SPDX-License-Identifier: AGPL-3.0-or-later
 
@@ -31,18 +32,32 @@ provisioner:
         # Helper variables
         docker_registry_browser_debug_service_enabled: false
 
+        # Where the browser is reachable from inside the Molecule container.
+        # The role's Traefik labels strip the path prefix before a request
+        # reaches the container, so this is how the application is addressed.
+        docker_registry_browser_molecule_url: "http://127.0.0.1:8080"
+
         # Variables for Docker Registry Browser
         docker_registry_browser_uid: 1000
         docker_registry_browser_gid: 1000
-        docker_registry_browser_scheme: http
         docker_registry_browser_hostname: localhost
         docker_registry_browser_container_labels_traefik_enabled: false
         docker_registry_browser_container_http_host_bind_port: 8080
-        docker_registry_browser_docker_registry_url: "http://{{ docker_registry_hostname }}:{{ docker_registry_container_http_host_bind_port }}"
         docker_registry_browser_secret_key_base: secret
 
         # Test self-building
         docker_registry_browser_container_image_self_build: true
+
+        # The registry runs on the browser's own container network, so the
+        # browser reaches it by container name.
+        docker_registry_browser_docker_registry_url: "http://{{ docker_registry_identifier }}:{{ docker_registry_container_http_port }}"
+
+        # Pinned to literal values, because verify.yml runs as a separate play,
+        # where the role's defaults are out of scope, and these are derived
+        # from other variables rather than being literals themselves.
+        docker_registry_browser_base_path: /docker-registry-browser
+        docker_registry_browser_container_network: docker-registry-browser
+        docker_registry_browser_path_prefix: /browser
 
         # Variables for Docker Registry
         docker_registry_enabled: true  # Because it is disabled by default
@@ -52,6 +67,7 @@ provisioner:
         docker_registry_hostname: localhost
         docker_registry_container_labels_traefik_enabled: false
         docker_registry_container_http_host_bind_port: 5000
+        docker_registry_container_http_port: 5000
         docker_registry_container_network: "{{ docker_registry_browser_container_network }}"
         # Add the loopback and all private (RFC1918) address ranges to the whitelist
         docker_registry_private_services_whitelisted_ip_ranges:

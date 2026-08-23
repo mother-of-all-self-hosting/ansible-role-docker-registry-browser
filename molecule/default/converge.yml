@@ -1,41 +1,272 @@
 # SPDX-FileCopyrightText: 2026 Suguru Hirahara
 # SPDX-FileCopyrightText: 2026 spatterlight
+# SPDX-FileCopyrightText: 2026 Slavi Pantaleev
 #
 # SPDX-License-Identifier: AGPL-3.0-or-later
 
 ---
-- name: Include roles for Docker Registry Browser Molecule tests
+# Everything that needs the supporting roles' variables in scope lives in this
+# one play, because `public: true` exposes them to the rest of the play only.
+- name: Install and exercise Docker Registry Browser for Molecule tests
   hosts: all
   become: true
   gather_facts: true
   tasks:
-    - name: Include roles for Docker Registry Browser Molecule tests
+    - name: Include supporting roles for Docker Registry Browser Molecule tests
       ansible.builtin.include_role:
         name: "{{ role_name }}"
         public: true
       loop:
         - com.devture.ansible.role.playbook_help
         - com.devture.ansible.role.systemd_docker_base
+      loop_control:
+        loop_var: role_name
+
+    # Role defaults are not in scope here, but the version Renovate bumps lives
+    # in them, and the negative control below has to run the very same image
+    # the role is about to run.
+    - name: Load the Docker Registry Browser role defaults
+      ansible.builtin.include_vars:
+        file: "{{ lookup('env', 'MOLECULE_PROJECT_DIRECTORY') }}/defaults/main.yml"
+        name: docker_registry_browser_defaults
+
+    - name: Ensure the Docker Registry seeding script is present
+      ansible.builtin.copy:
+        src: seed-registry.py
+        dest: /var/tmp/seed-registry.py
+        mode: "0755"
+
+    # -----------------------------------------------------------------
+    # What the host looked like before the role touched it
+    # -----------------------------------------------------------------
+
+    # Recorded rather than asserted here, so that every assertion lives in
+    # verify.yml. Without this, an assertion that the role's port serves a
+    # browser could just as well be describing something that was already
+    # there.
+    - name: Stat the Docker Registry Browser base path before the role runs
+      ansible.builtin.stat:
+        path: "{{ docker_registry_browser_base_path }}"
+      register: docker_registry_browser_molecule_base_path_before
+
+    - name: Determine whether anything answers on the Docker Registry Browser port before the role runs
+      ansible.builtin.uri:
+        url: "{{ docker_registry_browser_molecule_url }}/"
+        follow_redirects: none
+      register: docker_registry_browser_molecule_port_before
+      failed_when: false
+
+    - name: Record what the host looked like before the role ran
+      ansible.builtin.copy:
+        dest: "{{ docker_registry_browser_molecule_report_path_pre_role }}"
+        mode: "0644"
+        content: |
+          {{
+            {
+              'base_path_exists': docker_registry_browser_molecule_base_path_before.stat.exists,
+              'port_answered': (docker_registry_browser_molecule_port_before.status | default(-1)) > 0,
+            } | to_nice_json
+          }}
+
+    # -----------------------------------------------------------------
+    # Negative control: the stock image, with no role involvement at all
+    # -----------------------------------------------------------------
+
+    # The image on its own already serves HTTP, so a test that only checks
+    # "something answers" would pass without the role having done anything.
+    # Running the stock image here, unconfigured, pins down what the image
+    # gives you for free - and therefore what verify.yml may credit the role
+    # with. Two things are sharpest:
+    #
+    # - the repository listing at `/`, which the image answers with a 500,
+    #   because its default registry URL (`http://localhost:5000`) names its
+    #   own container, where nothing listens
+    # - the path prefix, which the image puts in front of nothing until
+    #   SCRIPT_NAME tells it to
+    #
+    # Started via the Docker CLI rather than community.docker.docker_container,
+    # because the ansible-lint environment used by pre-commit does not have the
+    # community.docker collection and would fail the playbook syntax check.
+    - name: Ensure the stock Docker Registry Browser container image is pulled
+      ansible.builtin.command:
+        argv:
+          - docker
+          - pull
+          - "docker.io/klausmeyer/docker-registry-browser:{{ docker_registry_browser_defaults.docker_registry_browser_version }}"
+      changed_when: true
+
+    # No DOCKER_REGISTRY_URL and no SCRIPT_NAME: those are precisely what the
+    # role supplies, so the control has to go without them. SECRET_KEY_BASE is
+    # the one exception - Rails refuses to boot at all without it, and a
+    # control that never booted would say nothing.
+    #
+    # Left on the default bridge network rather than the role's, because the
+    # point of this container is that it reaches no registry.
+    - name: Ensure the standalone Docker Registry Browser control container is running
+      ansible.builtin.command:
+        argv:
+          - docker
+          - run
+          - -d
+          - --name
+          - "{{ docker_registry_browser_molecule_control_container_name }}"
+          - -p
+          - "127.0.0.1:8099:8080"
+          - -e
+          - SECRET_KEY_BASE=control
+          - "docker.io/klausmeyer/docker-registry-browser:{{ docker_registry_browser_defaults.docker_registry_browser_version }}"
+      changed_when: true
+
+    # Rails' own health endpoint, which answers 200 as soon as the application
+    # has booted, without touching the registry at all.
+    - name: Wait for the standalone Docker Registry Browser control container to boot (up to 300s)
+      ansible.builtin.uri:
+        url: "{{ docker_registry_browser_molecule_control_url }}/up"
+      register: docker_registry_browser_molecule_control_up
+      until: docker_registry_browser_molecule_control_up is not failed
+      retries: 60
+      delay: 5
+
+    - name: Query the standalone Docker Registry Browser control repository listing
+      ansible.builtin.uri:
+        url: "{{ docker_registry_browser_molecule_control_url }}/"
+        status_code: [200, 500]
+        follow_redirects: none
+      register: docker_registry_browser_molecule_control_index
+
+    - name: Query the standalone Docker Registry Browser control path prefix
+      ansible.builtin.uri:
+        url: "{{ docker_registry_browser_molecule_control_url }}{{ docker_registry_browser_molecule_prefix_probe_path }}"
+        status_code: 301
+        follow_redirects: none
+      register: docker_registry_browser_molecule_control_prefix
+
+    - name: Record what the standalone Docker Registry Browser control answered
+      ansible.builtin.copy:
+        dest: "{{ docker_registry_browser_molecule_control_report_path }}"
+        mode: "0644"
+        content: |
+          {{
+            {
+              'up_status': docker_registry_browser_molecule_control_up.status,
+              'index_status': docker_registry_browser_molecule_control_index.status,
+              'prefix_redirect_path': docker_registry_browser_molecule_control_prefix.location | urlsplit('path'),
+            } | to_nice_json
+          }}
+
+    # -----------------------------------------------------------------
+    # First pass: the role's own defaults, which do not offer deletion
+    # -----------------------------------------------------------------
+
+    - name: Include the Docker Registry and Docker Registry Browser roles
+      ansible.builtin.include_role:
+        name: "{{ role_name }}"
+        public: true
+      loop:
         - ansible-role-docker-registry
         - "{{ lookup('env', 'MOLECULE_PROJECT_DIRECTORY') | basename }}"
       loop_control:
         loop_var: role_name
 
-- name: Ensure Docker Registry Browser service is started
-  hosts: all
-  become: true
-  gather_facts: false
-  tasks:
-    - name: Ensure systemd daemon is reloaded
-      ansible.builtin.systemd_service:
-        daemon_reload: true
-
-    - name: Ensure Docker Registry systemd service is started
+    - name: Ensure the Docker Registry systemd service is started
       ansible.builtin.systemd_service:
         name: docker-registry.service
         state: started
+        daemon_reload: true
 
-    - name: Ensure Docker Registry Browser systemd service is started
+    - name: Ensure the Docker Registry Browser systemd service is started
       ansible.builtin.systemd_service:
         name: docker-registry-browser.service
         state: started
+        daemon_reload: true
+
+    - name: Wait for the Docker Registry API to answer (up to 300s)
+      ansible.builtin.uri:
+        url: "http://127.0.0.1:{{ docker_registry_container_http_host_bind_port }}/v2/"
+      register: docker_registry_browser_molecule_registry_ping
+      until: docker_registry_browser_molecule_registry_ping is not failed
+      retries: 60
+      delay: 5
+
+    # The browser has nothing to show until the registry holds something, and
+    # what it holds is named distinctively enough that finding it in the UI
+    # cannot be a coincidence.
+    - name: Seed the Docker Registry with something for the browser to find
+      ansible.builtin.command:
+        argv: >-
+          {{
+            ['python3', '/var/tmp/seed-registry.py',
+             'http://127.0.0.1:' ~ docker_registry_container_http_host_bind_port,
+             docker_registry_browser_molecule_repository]
+            + docker_registry_browser_molecule_tags
+          }}
+      changed_when: true
+
+    - name: Wait for the Docker Registry Browser to serve its repository listing (up to 300s)
+      ansible.builtin.uri:
+        url: "{{ docker_registry_browser_molecule_url }}/"
+        follow_redirects: none
+      register: docker_registry_browser_molecule_index_ping
+      until: docker_registry_browser_molecule_index_ping is not failed
+      retries: 60
+      delay: 5
+
+    # Recorded now, because the second pass turns deletion on and this state
+    # cannot be returned to afterwards.
+    - name: Query a Docker Registry Browser tag while deletion is disabled
+      ansible.builtin.uri:
+        url: >-
+          {{ docker_registry_browser_molecule_url }}/repo/{{
+          docker_registry_browser_molecule_repository }}/tag/{{
+          docker_registry_browser_molecule_tags | first }}
+        return_content: true
+        # Recorded rather than enforced, so that verify.yml is where a tag page
+        # that did not render gets reported.
+        status_code: [200, 404, 500]
+        follow_redirects: none
+      register: docker_registry_browser_molecule_tag_delete_disabled
+
+    - name: Record what the Docker Registry Browser showed while deletion was disabled
+      ansible.builtin.copy:
+        dest: "{{ docker_registry_browser_molecule_report_path_delete_disabled }}"
+        mode: "0644"
+        content: |
+          {{
+            {
+              'tag_page_status': docker_registry_browser_molecule_tag_delete_disabled.status,
+              'delete_controls_offered': (
+                'Danger Zone' in docker_registry_browser_molecule_tag_delete_disabled.content
+                and 'Delete Tag' in docker_registry_browser_molecule_tag_delete_disabled.content
+              ),
+            } | to_nice_json
+          }}
+
+    # -----------------------------------------------------------------
+    # Second pass: deletion turned on, to show the knob reaches the process
+    # -----------------------------------------------------------------
+
+    # Not public, so the override stays scoped to this include. Only the env
+    # file changes, which makes this a test of the role's env file rather than
+    # of anything Molecule does directly.
+    - name: Include the Docker Registry Browser role with deletion enabled
+      ansible.builtin.include_role:
+        name: "{{ lookup('env', 'MOLECULE_PROJECT_DIRECTORY') | basename }}"
+      vars:
+        docker_registry_browser_enabled_delete_images: true
+
+    # The env file is only read when the container is created, so the running
+    # process keeps the old setting until the service is restarted.
+    - name: Ensure the Docker Registry Browser systemd service is restarted
+      ansible.builtin.systemd_service:
+        name: docker-registry-browser.service
+        state: restarted
+        daemon_reload: true
+
+    - name: Wait for the Docker Registry Browser to serve its repository listing again (up to 300s)
+      ansible.builtin.uri:
+        url: "{{ docker_registry_browser_molecule_url }}/"
+        follow_redirects: none
+      register: docker_registry_browser_molecule_index_ping_again
+      until: docker_registry_browser_molecule_index_ping_again is not failed
+      retries: 60
+      delay: 5

@@ -1,5 +1,6 @@
 # SPDX-FileCopyrightText: 2026 Suguru Hirahara
 # SPDX-FileCopyrightText: 2026 spatterlight
+# SPDX-FileCopyrightText: 2026 Slavi Pantaleev
 #
 # SPDX-License-Identifier: AGPL-3.0-or-later
 
@@ -31,15 +32,67 @@ provisioner:
         # Helper variables
         docker_registry_browser_debug_service_enabled: false
 
+        # Where the browser is reachable from inside the Molecule container.
+        #
+        # The role's Traefik labels put a `stripprefix` middleware in front of
+        # the container, so what reaches the application is always rooted at
+        # `/` no matter which path prefix it is published under. Addressing it
+        # here the way Traefik would is what makes these probes describe how
+        # the role is actually deployed. Asking for the path prefix directly
+        # instead - as this scenario used to - lands on the application's
+        # catch-all route, which answers 301 forever without rendering a page.
+        docker_registry_browser_molecule_url: "http://127.0.0.1:8080"
+
+        # The stock container image, run with no role involvement at all, as a
+        # negative control: it establishes which of the assertions in
+        # verify.yml are the role's doing rather than the image's. It is
+        # deliberately left on the default bridge network, because the whole
+        # point of it is that it reaches no registry.
+        docker_registry_browser_molecule_control_container_name: docker-registry-browser-default-standalone-control
+        docker_registry_browser_molecule_control_url: "http://127.0.0.1:8099"
+        docker_registry_browser_molecule_control_report_path: /root/control.json
+
+        # What gets seeded into the registry for the browser to find. Neither
+        # the repository nor the tags are anything the image or the registry
+        # would produce on their own, so finding them in the UI can only mean
+        # the browse pipeline reached this registry.
+        docker_registry_browser_molecule_repository: mash/molecule-probe
+        docker_registry_browser_molecule_tags:
+          - alpha
+          - beta
+
+        # Any path that is not a route of its own lands on the application's
+        # catch-all, which redirects to the repository page for it. That
+        # redirect is built with SCRIPT_NAME in front, which makes it readable
+        # even while the registry is unreachable - the one probe that works
+        # identically against the control and against the role.
+        docker_registry_browser_molecule_prefix_probe_path: /mash/molecule-probe
+
+        # Where converge.yml leaves its reports for verify.yml.
+        docker_registry_browser_molecule_report_path_pre_role: /root/pre-role-state.json
+        docker_registry_browser_molecule_report_path_delete_disabled: /root/delete-disabled.json
+
         # Variables for Docker Registry Browser
         docker_registry_browser_uid: 1000
         docker_registry_browser_gid: 1000
-        docker_registry_browser_scheme: http
         docker_registry_browser_hostname: localhost
         docker_registry_browser_container_labels_traefik_enabled: false
         docker_registry_browser_container_http_host_bind_port: 8080
-        docker_registry_browser_docker_registry_url: "http://{{ docker_registry_hostname }}:{{ docker_registry_container_http_host_bind_port }}"
         docker_registry_browser_secret_key_base: secret
+
+        # The registry runs on the browser's own container network, so the
+        # browser reaches it by container name. Addressing it as `localhost`
+        # instead - as this scenario used to - names the browser's own
+        # container, where nothing listens on 5000, leaving the browser with
+        # no registry at all.
+        docker_registry_browser_docker_registry_url: "http://{{ docker_registry_identifier }}:{{ docker_registry_container_http_port }}"
+
+        # Pinned to literal values, because verify.yml runs as a separate play,
+        # where the role's defaults are out of scope, and these are derived
+        # from other variables rather than being literals themselves.
+        docker_registry_browser_base_path: /docker-registry-browser
+        docker_registry_browser_container_network: docker-registry-browser
+        docker_registry_browser_path_prefix: /browser
 
         # Variables for Docker Registry
         docker_registry_enabled: true  # Because it is disabled by default
@@ -49,6 +102,7 @@ provisioner:
         docker_registry_hostname: localhost
         docker_registry_container_labels_traefik_enabled: false
         docker_registry_container_http_host_bind_port: 5000
+        docker_registry_container_http_port: 5000
         docker_registry_container_network: "{{ docker_registry_browser_container_network }}"
         # Add the loopback and all private (RFC1918) address ranges to the whitelist
         docker_registry_private_services_whitelisted_ip_ranges:
@@ -60,5 +114,24 @@ provisioner:
   env:
     # Workaround for https://github.com/ansible/molecule/issues/4391
     ANSIBLE_ROLES_PATH: ${MOLECULE_PROJECT_DIRECTORY}/..:/.ansible/roles:/usr/share/ansible/roles:/etc/ansible/roles:~/.ansible/roles
+scenario:
+  # See: https://docs.ansible.com/projects/molecule/configuration/?h=test_sequence#scenario
+  #
+  # Idempotence is left out: converge records what the host looked like before
+  # the role ran, starts a control container, seeds a registry and installs the
+  # role twice with different settings, none of which is a no-op on a second
+  # run.
+  test_sequence:
+    - dependency
+    - cleanup
+    - destroy
+    - syntax
+    - create
+    - prepare
+    - converge
+    - side_effect
+    - verify
+    - cleanup
+    - destroy
 verifier:
   name: ansible

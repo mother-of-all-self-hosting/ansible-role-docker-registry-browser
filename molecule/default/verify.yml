@@ -1,53 +1,390 @@
 # SPDX-FileCopyrightText: 2026 Suguru Hirahara
 # SPDX-FileCopyrightText: 2026 spatterlight
+# SPDX-FileCopyrightText: 2026 Slavi Pantaleev
 #
 # SPDX-License-Identifier: AGPL-3.0-or-later
 
 ---
-- name: Verify Docker Registry Browser systemd service
+- name: Verify Docker Registry Browser
   hosts: all
   become: true
   gather_facts: false
   tasks:
-    - name: Wait for Docker Registry Browser service to become active (up to 180s)
+    # Role defaults are not in scope here, but the version that Renovate bumps
+    # lives in them and is what the running application is checked against
+    # below.
+    - name: Load the Docker Registry Browser role defaults
+      ansible.builtin.include_vars:
+        file: "{{ lookup('env', 'MOLECULE_PROJECT_DIRECTORY') }}/defaults/main.yml"
+        name: docker_registry_browser_defaults
+
+    - name: Read what converge.yml recorded
+      ansible.builtin.slurp:
+        src: "{{ item }}"
+      register: docker_registry_browser_reports
+      loop:
+        - "{{ docker_registry_browser_molecule_report_path_pre_role }}"
+        - "{{ docker_registry_browser_molecule_control_report_path }}"
+        - "{{ docker_registry_browser_molecule_report_path_delete_disabled }}"
+
+    - name: Make sense of what converge.yml recorded
+      ansible.builtin.set_fact:
+        docker_registry_browser_pre_role: "{{ docker_registry_browser_reports.results[0].content | b64decode | from_json }}"
+        docker_registry_browser_control: "{{ docker_registry_browser_reports.results[1].content | b64decode | from_json }}"
+        docker_registry_browser_delete_disabled: "{{ docker_registry_browser_reports.results[2].content | b64decode | from_json }}"
+
+    # ---------------------------------------------------------------------
+    # The baseline: none of what follows was already true
+    # ---------------------------------------------------------------------
+
+    - name: Assert nothing was serving a browser before the role ran
+      ansible.builtin.assert:
+        that:
+          - not docker_registry_browser_pre_role.base_path_exists
+          - not docker_registry_browser_pre_role.port_answered
+        fail_msg: >-
+          The host already had a Docker Registry Browser before the role ran, so
+          nothing below can be attributed to the role:
+          {{ docker_registry_browser_pre_role }}
+        success_msg: "Neither the base path nor the browser port existed before the role ran"
+
+    # ---------------------------------------------------------------------
+    # The negative control: what the stock image gives you without the role
+    # ---------------------------------------------------------------------
+
+    # The image alone boots and serves HTTP. Saying so explicitly is what keeps
+    # the assertions further down honest: only the ones that differ from the
+    # control are the role's doing.
+    - name: Assert the stock container image serves HTTP on its own
+      ansible.builtin.assert:
+        that: docker_registry_browser_control.up_status == 200
+        fail_msg: >-
+          The stock container image did not boot ({{ docker_registry_browser_control.up_status }}),
+          so the control says nothing about what the role added
+        success_msg: >-
+          The stock container image boots and answers its health endpoint
+          unaided, so an answering port is not by itself evidence that the role
+          did anything
+
+    # The sharpest half of the control. The browser's whole purpose is the
+    # repository listing, and the image cannot produce one: its default
+    # registry URL names its own container, so `/` raises and Rails answers
+    # 500. Every listing assertion below therefore belongs to the role's
+    # DOCKER_REGISTRY_URL rather than to the image.
+    - name: Assert the stock container image cannot browse anything
+      ansible.builtin.assert:
+        that: docker_registry_browser_control.index_status == 500
+        fail_msg: >-
+          The stock container image served a repository listing
+          ({{ docker_registry_browser_control.index_status }}), so the listing
+          assertions below prove nothing
+        success_msg: >-
+          The stock container image answers its repository listing with 500, so
+          a browser that lists repositories can only have been pointed at a
+          registry by the role
+
+    - name: Assert the stock container image puts no path prefix in its links
+      ansible.builtin.assert:
+        that: >-
+          docker_registry_browser_control.prefix_redirect_path
+          == '/repo' ~ docker_registry_browser_molecule_prefix_probe_path
+        fail_msg: >-
+          The stock container image already prefixes its links
+          ({{ docker_registry_browser_control.prefix_redirect_path }}), so the
+          prefix assertion below proves nothing
+        success_msg: >-
+          The stock container image redirects to
+          {{ docker_registry_browser_control.prefix_redirect_path }} with no
+          path prefix, so a prefix can only come from the role's SCRIPT_NAME
+
+    # ---------------------------------------------------------------------
+    # The unit is up
+    # ---------------------------------------------------------------------
+
+    - name: Read the Docker Registry Browser service state
       ansible.builtin.systemd:
         name: docker-registry-browser.service
       register: docker_registry_browser_service
-      until: docker_registry_browser_service.status.ActiveState == 'active'
-      retries: 36
-      delay: 5
 
-    - name: Assert Docker Registry Browser service is active
+    - name: Assert the Docker Registry Browser service is active
       ansible.builtin.assert:
         that: docker_registry_browser_service.status.ActiveState == 'active'
-        fail_msg: "docker-registry-browser.service not active ({{ docker_registry_browser_service.status.ActiveState }})"
+        fail_msg: "docker-registry-browser.service is not active ({{ docker_registry_browser_service.status.ActiveState }})"
         success_msg: "docker-registry-browser.service is active"
 
-    - name: Retrieve Docker Registry Browser service log for debugging
+    - name: Retrieve the Docker Registry Browser service log for debugging
       when: docker_registry_browser_debug_service_enabled | bool
       ansible.builtin.command:
-        cmd: journalctl -xeu docker-registry-browser.service
+        argv:
+          - journalctl
+          - --no-pager
+          - --output=cat
+          - --unit=docker-registry-browser.service
       changed_when: false
 
-    - name: Wait for Docker Registry Browser HTTP endpoint to respond (up to 10m)
+    # ---------------------------------------------------------------------
+    # The browser serves a real repository listing, of the seeded registry
+    # ---------------------------------------------------------------------
+
+    # Addressed at `/` rather than at the path prefix, because the role's
+    # Traefik labels strip the prefix before the request reaches the container.
+    # A browser that cannot reach its registry answers 500 here, which is a
+    # result this scenario has something to say about rather than a transport
+    # error. Accepting it lets the assertion below report it, instead of the
+    # query failing first with nothing but a status code.
+    - name: Query the Docker Registry Browser repository listing
       ansible.builtin.uri:
-        url: "http://localhost:8080/browser"
-        method: GET
-        status_code: [200, 301, 302]
+        url: "{{ docker_registry_browser_molecule_url }}/"
+        return_content: true
+        status_code: [200, 404, 500]
         follow_redirects: none
-      register: docker_registry_browser_endpoint
-      until: docker_registry_browser_endpoint.status in [200, 301, 302]
-      retries: 120
-      delay: 5
+      register: docker_registry_browser_index
 
-    - name: Assert Docker Registry Browser HTTP endpoint responds
+    # The repository name was invented by this scenario and pushed by
+    # converge.yml. Its appearance in the UI means the role's
+    # DOCKER_REGISTRY_URL reached the process, the process reached the
+    # registry, and the catalog came back and got rendered - the whole browse
+    # pipeline, in one string.
+    - name: Assert the Docker Registry Browser lists the seeded repository
       ansible.builtin.assert:
-        that: docker_registry_browser_endpoint.status in [200, 301, 302]
-        fail_msg: "Docker Registry Browser did not respond as expected ({{ docker_registry_browser_endpoint.status | default('no response') }})"
-        success_msg: "Docker Registry Browser responded with {{ docker_registry_browser_endpoint.status }}"
+        that:
+          - docker_registry_browser_index.status == 200
+          - docker_registry_browser_molecule_repository in docker_registry_browser_index.content
+        fail_msg: >-
+          The repository listing does not mention
+          {{ docker_registry_browser_molecule_repository }}
+          (status {{ docker_registry_browser_index.status }})
+        success_msg: >-
+          The repository listing shows
+          {{ docker_registry_browser_molecule_repository }}, so the role pointed
+          the browser at the registry and the browse pipeline works
 
-    - name: Show Docker Registry Browser systemd service status summary
+    # ---------------------------------------------------------------------
+    # The configured path prefix reaches the running process
+    # ---------------------------------------------------------------------
+
+    # The links the application generates are built from SCRIPT_NAME, which is
+    # what the role's env file sets from docker_registry_browser_path_prefix.
+    # The control above proved the image writes no prefix of its own.
+    - name: Assert the Docker Registry Browser links carry the configured path prefix
+      ansible.builtin.assert:
+        that: >-
+          docker_registry_browser_path_prefix ~ '/repo/' ~ docker_registry_browser_molecule_repository
+          in docker_registry_browser_index.content
+        fail_msg: >-
+          The repository listing does not link to
+          {{ docker_registry_browser_path_prefix }}/repo/{{ docker_registry_browser_molecule_repository }}
+        success_msg: >-
+          The repository listing links to
+          {{ docker_registry_browser_path_prefix }}/repo/{{ docker_registry_browser_molecule_repository }},
+          so docker_registry_browser_path_prefix reached the running process
+
+    - name: Query the Docker Registry Browser path prefix the same way the control was queried
+      ansible.builtin.uri:
+        url: "{{ docker_registry_browser_molecule_url }}{{ docker_registry_browser_molecule_prefix_probe_path }}"
+        status_code: 301
+        follow_redirects: none
+      register: docker_registry_browser_prefix
+
+    # `location` is absolute, so the host and port have to come off before the
+    # path can be compared with the control's.
+    - name: Assert the Docker Registry Browser redirects with the configured path prefix
+      ansible.builtin.assert:
+        that: >-
+          docker_registry_browser_prefix.location | urlsplit('path')
+          == docker_registry_browser_path_prefix ~ '/repo' ~ docker_registry_browser_molecule_prefix_probe_path
+        fail_msg: >-
+          The redirect does not carry the configured path prefix:
+          {{ docker_registry_browser_prefix.location | urlsplit('path') }}
+        success_msg: >-
+          The redirect goes to
+          {{ docker_registry_browser_prefix.location | urlsplit('path') }},
+          where the control went to
+          {{ docker_registry_browser_control.prefix_redirect_path }}
+
+    # ---------------------------------------------------------------------
+    # The seeded tags are browsable, not merely the repository
+    # ---------------------------------------------------------------------
+
+    - name: Query the Docker Registry Browser repository page
+      ansible.builtin.uri:
+        url: "{{ docker_registry_browser_molecule_url }}/repo/{{ docker_registry_browser_molecule_repository }}"
+        return_content: true
+        status_code: [200, 404, 500]
+        follow_redirects: none
+      register: docker_registry_browser_repo_page
+
+    - name: Assert the Docker Registry Browser repository page was served
+      ansible.builtin.assert:
+        that: docker_registry_browser_repo_page.status == 200
+        fail_msg: "The repository page was not served ({{ docker_registry_browser_repo_page.status }})"
+        success_msg: "The repository page was served"
+
+    # Every seeded tag has a layer of its own and therefore a digest of its
+    # own, so these are genuinely distinct images rather than one image wearing
+    # several names.
+    - name: Assert every seeded tag is listed on the Docker Registry Browser repository page
+      ansible.builtin.assert:
+        that: >-
+          docker_registry_browser_path_prefix ~ '/repo/'
+          ~ docker_registry_browser_molecule_repository ~ '/tag/' ~ item
+          in docker_registry_browser_repo_page.content
+        fail_msg: "The repository page does not link to the {{ item }} tag"
+        success_msg: "The repository page links to the {{ item }} tag"
+      loop: "{{ docker_registry_browser_molecule_tags }}"
+
+    # ---------------------------------------------------------------------
+    # `docker_registry_browser_enabled_delete_images` reaches the running process
+    # ---------------------------------------------------------------------
+
+    - name: Read the Docker Registry Browser environment file
+      ansible.builtin.slurp:
+        src: "{{ docker_registry_browser_base_path }}/env"
+      register: docker_registry_browser_env_file
+
+    - name: Make sense of the Docker Registry Browser environment file
+      ansible.builtin.set_fact:
+        docker_registry_browser_env_lines: "{{ (docker_registry_browser_env_file.content | b64decode).splitlines() }}"
+
+    - name: Assert the configured settings reached the Docker Registry Browser env file
+      ansible.builtin.assert:
+        that:
+          # The second installation pass turned deletion on; had it not, the
+          # delete controls below could not have appeared.
+          - "'ENABLE_DELETE_IMAGES=true' in docker_registry_browser_env_lines"
+          - >-
+            'DOCKER_REGISTRY_URL=http://' ~ docker_registry_identifier ~ ':'
+            ~ docker_registry_container_http_port in docker_registry_browser_env_lines
+          - "'SCRIPT_NAME=' ~ docker_registry_browser_path_prefix in docker_registry_browser_env_lines"
+          - "'RAILS_RELATIVE_URL_ROOT=' ~ docker_registry_browser_path_prefix in docker_registry_browser_env_lines"
+          - "'TZ=' ~ docker_registry_browser_defaults.docker_registry_browser_environment_variables_tz in docker_registry_browser_env_lines"
+        fail_msg: "The configured settings did not reach the env file: {{ docker_registry_browser_env_lines }}"
+        success_msg: "The configured settings reached the env file"
+
+    - name: Query a Docker Registry Browser tag now that deletion is enabled
+      ansible.builtin.uri:
+        url: >-
+          {{ docker_registry_browser_molecule_url }}/repo/{{
+          docker_registry_browser_molecule_repository }}/tag/{{
+          docker_registry_browser_molecule_tags | first }}
+        return_content: true
+        status_code: [200, 404, 500]
+        follow_redirects: none
+      register: docker_registry_browser_tag_delete_enabled
+
+    - name: Assert the Docker Registry Browser tag page was served in both passes
+      ansible.builtin.assert:
+        that:
+          - docker_registry_browser_delete_disabled.tag_page_status == 200
+          - docker_registry_browser_tag_delete_enabled.status == 200
+        fail_msg: >-
+          A tag page was not served
+          (deletion disabled: {{ docker_registry_browser_delete_disabled.tag_page_status }},
+          deletion enabled: {{ docker_registry_browser_tag_delete_enabled.status }})
+        success_msg: "The tag page was served in both passes"
+
+    # The env file is read when the container is created, so this is the half
+    # that shows the setting actually took effect in the process: the same page
+    # that offered nothing in the first pass now offers the delete controls.
+    - name: Assert deletion is offered only once it is enabled
+      ansible.builtin.assert:
+        that:
+          - not docker_registry_browser_delete_disabled.delete_controls_offered
+          - "'Danger Zone' in docker_registry_browser_tag_delete_enabled.content"
+          - "'Delete Tag' in docker_registry_browser_tag_delete_enabled.content"
+        fail_msg: >-
+          The delete controls did not follow docker_registry_browser_enabled_delete_images
+          (offered while disabled: {{ docker_registry_browser_delete_disabled.delete_controls_offered }})
+        success_msg: >-
+          The tag page offers no delete controls while
+          docker_registry_browser_enabled_delete_images is false and offers them
+          once it is true
+
+    # ---------------------------------------------------------------------
+    # The version that is running is the one the role asks for
+    # ---------------------------------------------------------------------
+
+    # The image does carry an `org.opencontainers.image.version` label, but a
+    # label describes the image rather than the process, and `docker inspect`
+    # would report it whether or not the application ever booted. The running
+    # application prints its own version into the footer of every page it
+    # renders, taken from the SOURCE_VERSION its build stamped in, so that is
+    # what gets asked here.
+    - name: Determine which version the running Docker Registry Browser reports
+      ansible.builtin.set_fact:
+        # The group reference is `\1` rather than `\\1`: this is a folded YAML
+        # scalar, which passes backslashes through untouched, so what is
+        # written here is what regex_search receives. `\\1` would only be right
+        # inside a double-quoted YAML scalar, where YAML itself collapses it -
+        # and it fails while regex_search is parsing its arguments rather than
+        # while matching, with a 'NoneType' object has no attribute 'group'
+        # that reads like the pattern simply not matching.
+        #
+        # `regex_search` also answers with None rather than an empty list when
+        # it finds nothing, so the fallback has to be a list for `first` to
+        # have something to take. Without it, an unrecognizable footer would
+        # fail here instead of at the assertion below, which is the one that
+        # can say which version is running.
+        docker_registry_browser_reported_version: >-
+          {{ (docker_registry_browser_index.content
+              | regex_search('Version ([0-9]+[.][0-9]+[.][0-9]+)', '\1')
+              or ['']) | first }}
+
+    - name: Assert the running Docker Registry Browser is the version the role asks for
+      ansible.builtin.assert:
+        that: >-
+          docker_registry_browser_reported_version
+          == docker_registry_browser_defaults.docker_registry_browser_version
+        fail_msg: >-
+          The running browser is not
+          {{ docker_registry_browser_defaults.docker_registry_browser_version }}:
+          it reports '{{ docker_registry_browser_reported_version }}'
+        success_msg: >-
+          The running browser reports version
+          {{ docker_registry_browser_reported_version }} in its own footer,
+          which is docker_registry_browser_version
+
+    # ---------------------------------------------------------------------
+    # The container is created the way the role's variables describe
+    # ---------------------------------------------------------------------
+
+    - name: Inspect the Docker Registry Browser container
+      ansible.builtin.command:
+        argv:
+          - docker
+          - inspect
+          - docker-registry-browser
+      register: docker_registry_browser_container_inspect
+      changed_when: false
+
+    - name: Make sense of the Docker Registry Browser container inspection
+      ansible.builtin.set_fact:
+        docker_registry_browser_container: "{{ (docker_registry_browser_container_inspect.stdout | from_json)[0] }}"
+
+    - name: Assert the Docker Registry Browser container is created as configured
+      ansible.builtin.assert:
+        that:
+          - >-
+            docker_registry_browser_container.Config.Image
+            == 'docker.io/klausmeyer/docker-registry-browser:'
+            ~ docker_registry_browser_defaults.docker_registry_browser_version
+          - "'ALL' in docker_registry_browser_container.HostConfig.CapDrop"
+          - docker_registry_browser_container_network in docker_registry_browser_container.NetworkSettings.Networks
+          - >-
+            'size=' ~ docker_registry_browser_defaults.docker_registry_browser_container_tmpfs_tmp_size
+            in docker_registry_browser_container.HostConfig.Tmpfs['/tmp']
+        fail_msg: "The container is not created as configured: {{ docker_registry_browser_container.HostConfig }}"
+        success_msg: >-
+          The container runs {{ docker_registry_browser_container.Config.Image }},
+          drops all capabilities, joins {{ docker_registry_browser_container_network }},
+          and gets a tmpfs at /tmp
+
+    - name: Show the Docker Registry Browser verification summary
       ansible.builtin.debug:
         msg:
-          - "Docker Registry Browser systemd: {{ docker_registry_browser_service.status.ActiveState }}"
-          - "Docker Registry Browser HTTP: {{ docker_registry_browser_endpoint.status }}"
+          - "Service: {{ docker_registry_browser_service.status.ActiveState }}"
+          - "Repository listing: {{ docker_registry_browser_index.status }}"
+          - "Seeded repository: {{ docker_registry_browser_molecule_repository }}"
+          - "Seeded tags: {{ docker_registry_browser_molecule_tags | join(', ') }}"
+          - "Reported version: {{ docker_registry_browser_reported_version }}"
+          - "Control repository listing: {{ docker_registry_browser_control.index_status }}"
