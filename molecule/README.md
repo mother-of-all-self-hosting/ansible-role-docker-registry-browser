@@ -47,7 +47,7 @@ Currently these testing scenarios are available:
 
 ### `default`
 
-Tests a standard Docker Registry Browser installation, against a Docker Registry installed alongside it on the same container network and seeded with a repository and tags of the scenario's own invention.
+Tests a standard Docker Registry Browser installation, against a Distribution Registry installed alongside it on the same container network and seeded with a repository and tags of the scenario's own invention.
 
 The scenario starts by running the stock container image on its own, with no role involvement, as a negative control: the image boots and serves HTTP unaided, but it reaches no registry and puts no path prefix in its links, so those are the things the assertions may credit the role with. It then installs the role twice — once with its own defaults and once with tag deletion enabled — and checks that the seeded repository and each of its tags are browsable, that the configured path prefix reaches the running process, that the delete controls appear only once deletion is enabled, and that the version the application reports in its own page footer is the one `defaults/main.yml` asks for.
 

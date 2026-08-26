@@ -94,7 +94,7 @@ provisioner:
         docker_registry_browser_container_network: docker-registry-browser
         docker_registry_browser_path_prefix: /browser
 
-        # Variables for Docker Registry
+        # Variables for Distribution Registry
         docker_registry_enabled: true  # Because it is disabled by default
         docker_registry_identifier: docker-registry  # The default value is `container-registry`
         docker_registry_uid: 1000
