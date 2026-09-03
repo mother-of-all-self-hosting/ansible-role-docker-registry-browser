@@ -124,7 +124,7 @@
     - name: Show the Docker Registry Browser self-build verification summary
       ansible.builtin.debug:
         msg:
-          - "Service: {{ docker_registry_browser_service.status.ActiveState }}"
-          - "Repository listing: {{ docker_registry_browser_index.status }}"
-          - "Image: {{ docker_registry_browser_container.Config.Image }}"
-          - "Repository digests: {{ docker_registry_browser_image.RepoDigests }}"
+          - "Docker Registry Browser systemd: {{ docker_registry_browser_service.status.ActiveState }}"
+          - "Docker Registry Browser image: {{ docker_registry_browser_container.Config.Image }}"
+          - "Docker Registry Browser repository listing: {{ docker_registry_browser_index.status }}"
+          - "Docker Registry Browser repository digests: {{ docker_registry_browser_image.RepoDigests }}"
