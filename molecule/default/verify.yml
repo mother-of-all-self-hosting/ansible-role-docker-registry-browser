@@ -332,17 +332,9 @@
 
     - name: Assert the running Docker Registry Browser is the version this role installs
       ansible.builtin.assert:
-        that: >-
-          docker_registry_browser_reported_version
-          == docker_registry_browser_defaults.docker_registry_browser_version
-        fail_msg: >-
-          The running browser is not
-          {{ docker_registry_browser_defaults.docker_registry_browser_version }}:
-          it reports '{{ docker_registry_browser_reported_version }}'
-        success_msg: >-
-          The running browser reports version
-          {{ docker_registry_browser_reported_version }} in its own footer,
-          which is docker_registry_browser_version
+        that: "docker_registry_browser_reported_version == docker_registry_browser_defaults.docker_registry_browser_version"
+        fail_msg: "Docker Registry Browser reports {{ docker_registry_browser_reported_version | default('none') }}, expected {{ docker_registry_browser_defaults.docker_registry_browser_version }}"
+        success_msg: "Docker Registry Browser reports {{ docker_registry_browser_reported_version }}"
 
     # ---------------------------------------------------------------------
     # The container is created the way the role's variables describe
