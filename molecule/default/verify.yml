@@ -374,9 +374,9 @@
     - name: Show the Docker Registry Browser verification summary
       ansible.builtin.debug:
         msg:
-          - "Distribution Registry systemd: {{ docker_registry_browser_service.status.ActiveState }}"
-          - "Distribution Registry version: {{ docker_registry_browser_reported_version }}"
-          - "Distribution Registry repository listing: {{ docker_registry_browser_index.status }}"
-          - "Distribution Registry seeded repository: {{ docker_registry_browser_molecule_repository }}"
-          - "Distribution Registry seeded tags: {{ docker_registry_browser_molecule_tags | join(', ') }}"
-          - "Distribution Registry control repository listing: {{ docker_registry_browser_control.index_status }}"
+          - "Docker Registry Browser systemd: {{ docker_registry_browser_service.status.ActiveState }}"
+          - "Docker Registry Browser version: {{ docker_registry_browser_reported_version }}"
+          - "Docker Registry Browser repository listing: {{ docker_registry_browser_index.status }}"
+          - "Docker Registry Browser seeded repository: {{ docker_registry_browser_molecule_repository }}"
+          - "Docker Registry Browser seeded tags: {{ docker_registry_browser_molecule_tags | join(', ') }}"
+          - "Docker Registry Browser control repository listing: {{ docker_registry_browser_control.index_status }}"
