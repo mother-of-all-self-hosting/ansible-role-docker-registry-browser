@@ -76,7 +76,7 @@
       register: docker_registry_browser_container_inspect
       changed_when: false
 
-    - name: Make sense of the Docker Registry Browser container inspection
+    - name: Parse the Docker Registry Browser container inspection
       ansible.builtin.set_fact:
         docker_registry_browser_container: "{{ (docker_registry_browser_container_inspect.stdout | from_json)[0] }}"
 
@@ -104,7 +104,7 @@
       register: docker_registry_browser_image_inspect
       changed_when: false
 
-    - name: Make sense of the self-built Docker Registry Browser container image inspection
+    - name: Parse the self-built Docker Registry Browser container image inspection
       ansible.builtin.set_fact:
         docker_registry_browser_image: "{{ (docker_registry_browser_image_inspect.stdout | from_json)[0] }}"
 

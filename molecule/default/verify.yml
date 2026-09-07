@@ -278,7 +278,7 @@
         src: "{{ docker_registry_browser_base_path }}/env"
       register: docker_registry_browser_env_file
 
-    - name: Make sense of the Docker Registry Browser environment file
+    - name: Parse the Docker Registry Browser environment file
       ansible.builtin.set_fact:
         docker_registry_browser_env_lines: "{{ (docker_registry_browser_env_file.content | b64decode).splitlines() }}"
 
