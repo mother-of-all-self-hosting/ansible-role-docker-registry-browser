@@ -310,7 +310,7 @@
     # application prints its own version into the footer of every page it
     # renders, taken from the SOURCE_VERSION its build stamped in, so that is
     # what gets asked here.
-    - name: Determine which version the running Docker Registry Browser reports
+    - name: Determine the version of the running Docker Registry Browser
       ansible.builtin.set_fact:
         # The group reference is `\1` rather than `\\1`: this is a folded YAML
         # scalar, which passes backslashes through untouched, so what is
