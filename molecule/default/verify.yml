@@ -160,6 +160,42 @@
           the browser at the registry and the browse pipeline works
 
     # ---------------------------------------------------------------------
+    # The version that is running is the one the role asks for
+    # ---------------------------------------------------------------------
+
+    # The image does carry an `org.opencontainers.image.version` label, but a
+    # label describes the image rather than the process, and `docker inspect`
+    # would report it whether or not the application ever booted. The running
+    # application prints its own version into the footer of every page it
+    # renders, taken from the SOURCE_VERSION its build stamped in, so that is
+    # what gets asked here.
+    - name: Determine the version of the running Docker Registry Browser
+      ansible.builtin.set_fact:
+        # The group reference is `\1` rather than `\\1`: this is a folded YAML
+        # scalar, which passes backslashes through untouched, so what is
+        # written here is what regex_search receives. `\\1` would only be right
+        # inside a double-quoted YAML scalar, where YAML itself collapses it -
+        # and it fails while regex_search is parsing its arguments rather than
+        # while matching, with a 'NoneType' object has no attribute 'group'
+        # that reads like the pattern simply not matching.
+        #
+        # `regex_search` also answers with None rather than an empty list when
+        # it finds nothing, so the fallback has to be a list for `first` to
+        # have something to take. Without it, an unrecognizable footer would
+        # fail here instead of at the assertion below, which is the one that
+        # can say which version is running.
+        docker_registry_browser_reported_version: >-
+          {{ (docker_registry_browser_index.content
+              | regex_search('Version ([0-9]+[.][0-9]+[.][0-9]+)', '\1')
+              or ['']) | first }}
+
+    - name: Assert the running Docker Registry Browser is the version this role installs
+      ansible.builtin.assert:
+        that: "docker_registry_browser_reported_version == docker_registry_browser_defaults.docker_registry_browser_version"
+        fail_msg: "Docker Registry Browser reports {{ docker_registry_browser_reported_version | default('none') }}, expected {{ docker_registry_browser_defaults.docker_registry_browser_version }}"
+        success_msg: "Docker Registry Browser reports {{ docker_registry_browser_reported_version }}"
+
+    # ---------------------------------------------------------------------
     # The configured path prefix reaches the running process
     # ---------------------------------------------------------------------
 
@@ -299,42 +335,6 @@
           The tag page offers no delete controls while
           docker_registry_browser_enabled_delete_images is false and offers them
           once it is true
-
-    # ---------------------------------------------------------------------
-    # The version that is running is the one the role asks for
-    # ---------------------------------------------------------------------
-
-    # The image does carry an `org.opencontainers.image.version` label, but a
-    # label describes the image rather than the process, and `docker inspect`
-    # would report it whether or not the application ever booted. The running
-    # application prints its own version into the footer of every page it
-    # renders, taken from the SOURCE_VERSION its build stamped in, so that is
-    # what gets asked here.
-    - name: Determine the version of the running Docker Registry Browser
-      ansible.builtin.set_fact:
-        # The group reference is `\1` rather than `\\1`: this is a folded YAML
-        # scalar, which passes backslashes through untouched, so what is
-        # written here is what regex_search receives. `\\1` would only be right
-        # inside a double-quoted YAML scalar, where YAML itself collapses it -
-        # and it fails while regex_search is parsing its arguments rather than
-        # while matching, with a 'NoneType' object has no attribute 'group'
-        # that reads like the pattern simply not matching.
-        #
-        # `regex_search` also answers with None rather than an empty list when
-        # it finds nothing, so the fallback has to be a list for `first` to
-        # have something to take. Without it, an unrecognizable footer would
-        # fail here instead of at the assertion below, which is the one that
-        # can say which version is running.
-        docker_registry_browser_reported_version: >-
-          {{ (docker_registry_browser_index.content
-              | regex_search('Version ([0-9]+[.][0-9]+[.][0-9]+)', '\1')
-              or ['']) | first }}
-
-    - name: Assert the running Docker Registry Browser is the version this role installs
-      ansible.builtin.assert:
-        that: "docker_registry_browser_reported_version == docker_registry_browser_defaults.docker_registry_browser_version"
-        fail_msg: "Docker Registry Browser reports {{ docker_registry_browser_reported_version | default('none') }}, expected {{ docker_registry_browser_defaults.docker_registry_browser_version }}"
-        success_msg: "Docker Registry Browser reports {{ docker_registry_browser_reported_version }}"
 
     # ---------------------------------------------------------------------
     # The container is created the way the role's variables describe
