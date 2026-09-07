@@ -73,12 +73,12 @@
           - docker
           - inspect
           - docker-registry-browser
-      register: docker_registry_browser_container_inspect
+      register: docker_registry_browser_container_raw
       changed_when: false
 
     - name: Parse the Docker Registry Browser container inspection
       ansible.builtin.set_fact:
-        docker_registry_browser_container: "{{ (docker_registry_browser_container_inspect.stdout | from_json)[0] }}"
+        docker_registry_browser_container: "{{ (docker_registry_browser_container_raw.stdout | from_json)[0] }}"
 
     # The self-built image is tagged after the git tag of the source that was
     # checked out, which carries a `v` the Docker Hub tag does not. That one

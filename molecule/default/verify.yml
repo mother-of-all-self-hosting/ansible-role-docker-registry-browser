@@ -346,12 +346,12 @@
           - docker
           - inspect
           - docker-registry-browser
-      register: docker_registry_browser_container_inspect
+      register: docker_registry_browser_container_raw
       changed_when: false
 
     - name: Make sense of the Docker Registry Browser container inspection
       ansible.builtin.set_fact:
-        docker_registry_browser_container: "{{ (docker_registry_browser_container_inspect.stdout | from_json)[0] }}"
+        docker_registry_browser_container: "{{ (docker_registry_browser_container_raw.stdout | from_json)[0] }}"
 
     - name: Assert the Docker Registry Browser container is created as configured
       ansible.builtin.assert:
