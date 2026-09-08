@@ -46,11 +46,7 @@
     - name: Retrieve the Docker Registry Browser systemd service log for debugging
       when: docker_registry_browser_debug_service_enabled | bool
       ansible.builtin.command:
-        argv:
-          - journalctl
-          - --no-pager
-          - --output=cat
-          - --unit=docker-registry-browser.service
+        cmd: journalctl --no-pager --output=cat --unit=docker-registry-browser.service
       changed_when: false
 
     # A self-built image that boots but cannot reach the registry would answer
@@ -75,10 +71,7 @@
 
     - name: Inspect the Docker Registry Browser container
       ansible.builtin.command:
-        argv:
-          - docker
-          - inspect
-          - docker-registry-browser
+        cmd: docker container inspect docker-registry-browser
       register: docker_registry_browser_container_raw
       changed_when: false
 
@@ -103,10 +96,7 @@
 
     - name: Inspect the self-built Docker Registry Browser container image
       ansible.builtin.command:
-        argv:
-          - docker
-          - inspect
-          - "klausmeyer/docker-registry-browser:v{{ docker_registry_browser_defaults.docker_registry_browser_version }}"
+        cmd: "docker inspect klausmeyer/docker-registry-browser:v{{ docker_registry_browser_defaults.docker_registry_browser_version }}"
       register: docker_registry_browser_image_raw
       changed_when: false
 

@@ -89,10 +89,7 @@
     # community.docker collection and would fail the playbook syntax check.
     - name: Ensure the stock Docker Registry Browser container image is pulled
       ansible.builtin.command:
-        argv:
-          - docker
-          - pull
-          - "docker.io/klausmeyer/docker-registry-browser:{{ docker_registry_browser_defaults.docker_registry_browser_version }}"
+        cmd: "docker pull docker.io/klausmeyer/docker-registry-browser:{{ docker_registry_browser_defaults.docker_registry_browser_version }}"
       changed_when: true
 
     # No DOCKER_REGISTRY_URL and no SCRIPT_NAME: those are precisely what the
@@ -104,17 +101,12 @@
     # point of this container is that it reaches no registry.
     - name: Ensure the standalone Docker Registry Browser control container is running
       ansible.builtin.command:
-        argv:
-          - docker
-          - run
-          - -d
-          - --name
-          - "{{ docker_registry_browser_molecule_control_container_name }}"
-          - -p
-          - "127.0.0.1:8099:8080"
-          - -e
-          - SECRET_KEY_BASE=control
-          - "docker.io/klausmeyer/docker-registry-browser:{{ docker_registry_browser_defaults.docker_registry_browser_version }}"
+        cmd: >-
+          docker run -d
+          --name "{{ docker_registry_browser_molecule_control_container_name }}"
+          -p "127.0.0.1:8099:8080"
+          -e SECRET_KEY_BASE=control
+          docker.io/klausmeyer/docker-registry-browser:{{ docker_registry_browser_defaults.docker_registry_browser_version }}
       changed_when: true
 
     # Rails' own health endpoint, which answers 200 as soon as the application
