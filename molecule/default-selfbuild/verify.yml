@@ -15,6 +15,8 @@
   become: true
   gather_facts: false
   tasks:
+    - name: Verify that Docker Registry Browser works
+      block:
     # The role is not included in this playbook, so its defaults are not in
     # scope. Reading defaults/main.yml directly ties the version assertion
     # below.
@@ -127,3 +129,19 @@
           - "Docker Registry Browser image: {{ docker_registry_browser_container.Config.Image }}"
           - "Docker Registry Browser repository listing: {{ docker_registry_browser_index.status }}"
           - "Docker Registry Browser repository digests: {{ docker_registry_browser_image.RepoDigests }}"
+
+      rescue:
+        # Whatever went wrong, the reason is almost always in the systemd service log.
+        - name: Retrieve the Docker Registry Browser systemd service log
+          ansible.builtin.command:
+            cmd: journalctl --no-pager --output=cat --unit=docker-registry-browser.service
+          register: docker_registry_browser_service_log
+          changed_when: false
+
+        - name: Show the Docker Registry Browser systemd service log
+          ansible.builtin.debug:
+            var: docker_registry_browser_service_log.stdout_lines
+
+        - name: Fail because verification did not pass
+          ansible.builtin.fail:
+            msg: "Docker Registry Browser verification failed. The systemd service log is printed above."
