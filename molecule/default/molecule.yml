@@ -31,6 +31,7 @@ provisioner:
       all:
         # Helper variables
         docker_registry_browser_debug_service_enabled: false
+        docker_registry_browser_restarts_check_enabled: true
 
         # Where the browser is reachable from inside the Molecule container.
         #
