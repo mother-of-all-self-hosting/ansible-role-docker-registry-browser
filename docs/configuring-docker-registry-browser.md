@@ -18,11 +18,11 @@ SPDX-License-Identifier: AGPL-3.0-or-later
 
 # Setting up Docker Registry Browser
 
-This is an [Ansible](https://www.ansible.com/) role which installs [Docker Registry Browser](https://actualbudget.org) to run as a [Docker](https://www.docker.com/) container wrapped in a systemd service.
+This is an [Ansible](https://www.ansible.com/) role which installs [Docker Registry Browser](https://github.com/klausmeyer/docker-registry-browser) to run as a [Docker](https://www.docker.com/) container wrapped in a systemd service.
 
-Docker Registry Browser is a local-first personal finance tool.
+Docker Registry Browser is a web interface for the Docker Registry HTTP API V2, written in Ruby on Rails.
 
-See the project's [documentation](https://actualbudget.org/docs/) to learn what Docker Registry Browser does and why it might be useful to you.
+See the project's [documentation](https://github.com/klausmeyer/docker-registry-browser/blob/master/README.md) to learn what Docker Registry Browser does and why it might be useful to you.
 
 ## Adjusting the playbook configuration
 
@@ -56,7 +56,34 @@ docker_registry_browser_hostname: "example.com"
 
 After adjusting the hostname, make sure to adjust your DNS records to point the domain to your server.
 
-**Note**: hosting Docker Registry Browser under a subpath (by configuring the `docker_registry_browser_path_prefix` variable) does not seem to be possible due to Docker Registry Browser's technical limitations.
+### Specify a full URL to the container registry
+
+It is also necessary to set a URL to a Distribution Registry instance by adding the following configuration to your `vars.yml` file. Make sure to replace `registry.example.com` with your own value.
+
+```yaml
+docker_registry_browser_docker_registry_url: https://registry.example.com
+```
+
+### Enabling image deletion (optional)
+
+Image deletion is disabled by default. If you need it, you have to explicitly enable it as below:
+
+```yaml
+docker_registry_browser_enabled_delete_images: true
+```
+
+### Configuring HTTP Basic authentication (optional)
+
+If Docker Registry Browser will be able to delete images and live on the same private container network as the registry itself, it is recommended to protect it with HTTP Basic authentication by adding the following configuration to your `vars.yml` file:
+
+```yaml
+docker_registry_browser_basic_auth_enabled: true
+
+docker_registry_browser_basic_auth_username: admin
+
+# You can put any string here, but generating a strong one is preferred (e.g. `pwgen -s 64 1`).
+docker_registry_browser_basic_auth_password: ""
+```
 
 ### Extending the configuration
 
@@ -78,7 +105,9 @@ If you use the MASH playbook, the shortcut commands with the [`just` program](ht
 
 ## Usage
 
-After running the command for installation, Docker Registry Browser becomes available at the specified hostname like `https://example.com`. To use it, open the URL on the browser and create an account.
+After running the command for installation, Docker Registry Browser becomes available at the specified hostname like `https://example.com`.
+
+You should be able to browse the images and possibly delete them (if enabled via `docker_registry_browser_enabled_delete_images`).
 
 ## Troubleshooting
 

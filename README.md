@@ -7,7 +7,7 @@ SPDX-License-Identifier: AGPL-3.0-or-later
 
 # Docker Registry Browser Ansible role
 
-This is an [Ansible](https://www.ansible.com/) role which installs the [Docker Registry Browser](https://github.com/klausmeyer/docker-registry-browser) container image distribution registry to run as a [Docker](https://www.docker.com/) container wrapped in a systemd service.
+This is an [Ansible](https://www.ansible.com/) role which installs [Docker Registry Browser](https://github.com/klausmeyer/docker-registry-browser) to run as a [Docker](https://www.docker.com/) container wrapped in a systemd service.
 
 This role *implicitly* depends on:
 
