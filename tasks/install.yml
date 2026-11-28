@@ -61,6 +61,7 @@
         owner: "{{ docker_registry_browser_uid }}"
         group: "{{ docker_registry_browser_gid }}"
         recurse: true
+      tags: molecule-idempotence-notest
 
     - name: Ensure Docker Registry Browser repository is present on self-build
       ansible.builtin.git:
