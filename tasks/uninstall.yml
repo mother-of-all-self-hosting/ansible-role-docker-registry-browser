@@ -42,6 +42,7 @@
               {{ docker_registry_browser_container_network }}
           register: docker_registry_browser_network_deletion_result
           changed_when: docker_registry_browser_container_network in docker_registry_browser_network_deletion_result.stdout
+          failed_when: docker_registry_browser_network_deletion_result.rc != 0 and 'not found' not in docker_registry_browser_network_deletion_result.stderr
 
     - name: Ensure Docker Registry Browser path does not exist
       ansible.builtin.file:
